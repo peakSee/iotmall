@@ -1,0 +1,113 @@
+[
+  {
+    "id": 3001,
+    "slug": "u10l-随身-wifi",
+    "name": "U10L 随身 WiFi",
+    "model": "U10L",
+    "category": "portable_wifi",
+    "network_type": "4G",
+    "price": 199,
+    "original_price": 269,
+    "stock": 32,
+    "badge": "便携主推",
+    "short_description": "体积小，适合日常外出、摆摊收款、移动办公和临时热点使用。",
+    "description": "适合搭配全国 4G 套餐与部分稳定型套餐进行设备配卡，可作为入门款设备。",
+    "features": [
+      "便携小巧",
+      "适合移动上网",
+      "支持与套餐绑定下单"
+    ],
+    "tags": [
+      "随身 WiFi",
+      "4G",
+      "便携"
+    ],
+    "compatible_plan_ids": [
+      2003,
+      2004,
+      2005,
+      2006,
+      2007,
+      2009,
+      2010,
+      2011,
+      2012
+    ],
+    "cover_image": "/uploads/entity_1774275230971.avif",
+    "featured": true,
+    "status": "active",
+    "hot_rank": 10,
+    "sort_order": 1
+  },
+  {
+    "id": 3002,
+    "slug": "zte-f50-portable-5g",
+    "name": "中兴 F50 5G 随身 WiFi",
+    "model": "ZTE F50",
+    "category": "portable_wifi",
+    "network_type": "5G",
+    "price": 399,
+    "original_price": 499,
+    "stock": 18,
+    "badge": "5G 热销",
+    "short_description": "适合直播推流、多人共享热点、户外办公和高频使用场景。",
+    "description": "可与主流 4G / 5G 套餐组合销售，是前台主推的 5G 移动网络设备。",
+    "features": [
+      "支持 5G / 4G",
+      "适合高速上网",
+      "适合和 5G 套餐一起下单"
+    ],
+    "tags": [
+      "5G",
+      "随身 WiFi",
+      "直播"
+    ],
+    "compatible_plan_ids": [
+      2001,
+      2002,
+      2003,
+      2008,
+      2009,
+      2010
+    ],
+    "cover_image": "/media/devices/中兴F50/O1CN01105xBW1g3RLLfCDyF_!!4611686018427380902-0-fleamarket%20(1).jpg",
+    "featured": true,
+    "status": "active",
+    "hot_rank": 10,
+    "sort_order": 2
+  },
+  {
+    "id": 3003,
+    "slug": "zte-f32pro-cpe",
+    "name": "中兴 F32 Pro 5G CPE",
+    "model": "ZTE F32 Pro",
+    "category": "cpe",
+    "network_type": "4G/5G",
+    "price": 699,
+    "original_price": 899,
+    "stock": 12,
+    "badge": "门店常用",
+    "short_description": "适合门店、工作室、家用备网和固定点位长时间联网场景。",
+    "description": "更适合与高速或稳定型套餐组合销售，可用于家庭和商用网络需求。",
+    "features": [
+      "适合固定点位",
+      "CPE 设备更稳定",
+      "支持高流量套餐搭配"
+    ],
+    "tags": [
+      "CPE",
+      "5G",
+      "门店"
+    ],
+    "compatible_plan_ids": [
+      2001,
+      2008,
+      2012
+    ],
+    "cover_image": "/media/devices/中兴F32pro/O1CN010rdTXI1S9wRZT9hmn_!!4611686018427386861-0-mtopupload.avif",
+    "featured": true,
+    "status": "active",
+    "hot_rank": 10,
+    "sort_order": 3
+  }
+]

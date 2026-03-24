@@ -1,0 +1,219 @@
+[
+  {
+    "id": 1,
+    "name": "移动4G-全国资费",
+    "product_type": "card",
+    "carrier": "移动",
+    "network_type": "4G",
+    "device_type": "MIFI",
+    "speed": "上行100Mbps/下行100Mbps",
+    "qci": "QCI9",
+    "price": 99,
+    "sales": 3572,
+    "stock": 499,
+    "low_stock_threshold": 20,
+    "region": "全国通用",
+    "image": "/uploads/goods_1774113868059.jpg",
+    "plans": [
+      {
+        "price": "1元",
+        "volume": "3G"
+      },
+      {
+        "price": "3元",
+        "volume": "6G"
+      },
+      {
+        "price": "4元",
+        "volume": "9G"
+      }
+    ],
+    "product_description": "<p><strong style=\"color: rgb(225, 60, 57);\">移动4G-全国版资费👇：</strong></p><p><span style=\"color: rgb(225, 60, 57);\">1：禁止PCDN以及P2P/商业下载等一切违法违规行为</span></p><p><span style=\"color: rgb(225, 60, 57);\">2：激活后严禁私自拆机/刷机/修改机器IMEI等行为</span></p><p><span style=\"color: rgb(225, 60, 57);\">3：该产品，新疆 西藏 云南 地区无法使用</span></p><p><span style=\"color: rgb(225, 60, 57);\">4：月套餐价格x11 就是年套餐价格</span></p><p><span style=\"color: rgb(225, 60, 57);\">5：所标注速率为签约速率，因网速是多方面决定，与基站也有关联，下单前请确认自己所使用的房间内对应的运营商信号没问题再下单</span></p>"
+  },
+  {
+    "id": 2,
+    "name": "电信4G-全国资费",
+    "product_type": "card",
+    "carrier": "电信",
+    "network_type": "4G",
+    "device_type": "UIFI",
+    "speed": "上行75Mbps/下行150Mbps",
+    "qci": "标准QoS",
+    "price": 99,
+    "sales": 2872,
+    "stock": 499,
+    "low_stock_threshold": 20,
+    "region": "全国通用",
+    "image": "/uploads/goods_1774113875595.png",
+    "plans": [
+      {
+        "price": "1",
+        "volume": "元"
+      },
+      {
+        "price": "3",
+        "volume": "元"
+      },
+      {
+        "price": "4",
+        "volume": "元"
+      }
+    ],
+    "product_description": ""
+  },
+  {
+    "id": 3,
+    "name": "联通4G-全国资费",
+    "product_type": "card",
+    "carrier": "联通",
+    "network_type": "4G",
+    "device_type": "CPE",
+    "speed": "上行20Mbps/下行20Mbps",
+    "qci": "QCI9",
+    "price": 99,
+    "sales": 741,
+    "stock": 500,
+    "low_stock_threshold": 20,
+    "region": "全国通用",
+    "image": "/uploads/goods_1774113883098.jpg",
+    "plans": [
+      {
+        "price": "1",
+        "volume": "元"
+      },
+      {
+        "price": "3",
+        "volume": "元"
+      },
+      {
+        "price": "4",
+        "volume": "元"
+      }
+    ],
+    "product_description": ""
+  },
+  {
+    "id": 4,
+    "name": "移动5G-全国资费",
+    "product_type": "card",
+    "carrier": "移动",
+    "network_type": "5G",
+    "device_type": "MIFI",
+    "speed": "上行60Mbps/下行500Mbps",
+    "qci": "QCI8",
+    "price": 99,
+    "sales": 3147,
+    "stock": 500,
+    "low_stock_threshold": 20,
+    "region": "全国畅享",
+    "image": "/uploads/goods_1774113890273.jpg",
+    "plans": [
+      {
+        "price": "1",
+        "volume": "元"
+      },
+      {
+        "price": "3",
+        "volume": "元"
+      },
+      {
+        "price": "4",
+        "volume": "元"
+      }
+    ],
+    "product_description": ""
+  },
+  {
+    "id": 5,
+    "name": "MIFI-4G设备",
+    "product_type": "device",
+    "carrier": "",
+    "network_type": "4G",
+    "device_type": "MIFI",
+    "speed": "4G全网通",
+    "qci": "",
+    "price": 299,
+    "sales": 1200,
+    "stock": 50,
+    "low_stock_threshold": 5,
+    "region": "全国",
+    "image": "/uploads/goods_1774113909639.avif",
+    "plans": [
+      {
+        "price": "1",
+        "volume": "元"
+      },
+      {
+        "price": "3",
+        "volume": "元"
+      },
+      {
+        "price": "4",
+        "volume": "元"
+      }
+    ],
+    "product_description": ""
+  },
+  {
+    "id": 6,
+    "name": "UIFI-5G设备",
+    "product_type": "device",
+    "carrier": "",
+    "network_type": "5G",
+    "device_type": "UIFI",
+    "speed": "5G双模",
+    "qci": "",
+    "price": 499,
+    "sales": 800,
+    "stock": 50,
+    "low_stock_threshold": 5,
+    "region": "全国",
+    "image": "/uploads/goods_1774113904857.avif",
+    "plans": [
+      {
+        "price": "1",
+        "volume": "元"
+      },
+      {
+        "price": "3",
+        "volume": "元"
+      },
+      {
+        "price": "4",
+        "volume": "元"
+      }
+    ],
+    "product_description": ""
+  },
+  {
+    "id": 7,
+    "name": "CPE-5G设备",
+    "product_type": "device",
+    "carrier": "",
+    "network_type": "5G",
+    "device_type": "CPE",
+    "speed": "5G全网通",
+    "qci": "",
+    "price": 699,
+    "sales": 600,
+    "stock": 50,
+    "low_stock_threshold": 5,
+    "region": "全国",
+    "image": "/uploads/goods_1774113916191.avif",
+    "plans": [
+      {
+        "price": "1",
+        "volume": "元"
+      },
+      {
+        "price": "3",
+        "volume": "元"
+      },
+      {
+        "price": "4",
+        "volume": "元"
+      }
+    ],
+    "product_description": ""
+  }
+]

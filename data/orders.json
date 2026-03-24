@@ -1,0 +1,58 @@
+[
+  {
+    "id": 1774264845368,
+    "order_no": "IOT202603232660",
+    "user_id": 17724888898,
+    "flow_type": "buy_device",
+    "status": "shipped",
+    "plan_id": 2001,
+    "device_id": 3002,
+    "quantity": 1,
+    "plan_snapshot": {
+      "name": "移动 5G 全国套餐图",
+      "monthly_data": "以套餐图为准",
+      "monthly_price": 0,
+      "setup_price": 39,
+      "carrier": "中国移动",
+      "network_type": "5G"
+    },
+    "device_snapshot": {
+      "name": "中兴 F50 5G 随身 WiFi",
+      "model": "ZTE F50",
+      "category": "portable_wifi",
+      "price": 399,
+      "network_type": "5G"
+    },
+    "pricing": {
+      "plan_amount": 39,
+      "device_amount": 399,
+      "service_amount": 0,
+      "total_amount": 438
+    },
+    "payment_method": "wechat",
+    "payment_proof": "/uploads/payment_1774264845362.jpg",
+    "customer_name": "管理员",
+    "customer_phone": "17724888898",
+    "shipping_address": "河南省新乡市原阳县福宁集镇张大夫寨",
+    "remark": "速度发货谢谢",
+    "device_submission": {
+      "brand": "",
+      "model": "",
+      "can_insert_card": "",
+      "remove_control": "",
+      "condition": "",
+      "notes": "",
+      "outbound_tracking": ""
+    },
+    "admin_note": "",
+    "internal_tags": [],
+    "processing_logs": [],
+    "logistics_company": "邮政速递",
+    "merchant_tracking_number": "sssssss",
+    "created_at": "2026-03-23T11:20:45.368Z",
+    "reviewed_at": "2026-03-23T13:13:17.575Z",
+    "shipped_at": "2026-03-23T13:13:17.575Z",
+    "completed_at": null,
+    "cancelled_at": null
+  }
+]

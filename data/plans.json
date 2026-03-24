@@ -1,0 +1,362 @@
+[
+  {
+    "id": 2001,
+    "slug": "移动-5g-全国套餐图",
+    "name": "移动 5G 全国套餐图",
+    "carrier": "中国移动",
+    "network_type": "5G",
+    "monthly_data": "以套餐图为准",
+    "monthly_price": 0,
+    "setup_price": 39,
+    "badge": "全国常用",
+    "best_for": "适合随身 WiFi、直播热点和外出办公场景。",
+    "coverage": "全国资费与适用范围以套餐图为准",
+    "purchase_note": "物联卡不单独售卖，仅用于设备配卡。",
+    "description": "首页重点展示套餐资费图，文字仅作补充说明。",
+    "features": [
+      "支持购买设备配卡",
+      "支持寄设备来配卡",
+      "套餐详细内容以图片为准"
+    ],
+    "tags": [
+      "5G",
+      "全国",
+      "主推"
+    ],
+    "cover_image": "/uploads/entity_1774264890089.jpg",
+    "featured": true,
+    "status": "active",
+    "hot_rank": 10,
+    "sort_order": 1
+  },
+  {
+    "id": 2002,
+    "slug": "yd-5g-guangdong",
+    "name": "移动 5G 广东套餐图",
+    "carrier": "中国移动",
+    "network_type": "5G",
+    "monthly_data": "以套餐图为准",
+    "monthly_price": 0,
+    "setup_price": 39,
+    "badge": "广东专用",
+    "best_for": "适合广东地区用户参考选择。",
+    "coverage": "地区限制与说明以套餐图为准",
+    "purchase_note": "先看图确认，再选设备配卡或寄设备配卡。",
+    "description": "适合地区型资费展示。",
+    "features": [
+      "地区套餐展示",
+      "适合本地定向客户",
+      "支持人工审核配卡"
+    ],
+    "tags": [
+      "5G",
+      "广东",
+      "地区"
+    ],
+    "cover_image": "/media/plans/移动/移动5G广东.png",
+    "featured": false,
+    "status": "active",
+    "hot_rank": 0,
+    "sort_order": 2
+  },
+  {
+    "id": 2003,
+    "slug": "移动-4g-全国套餐图",
+    "name": "移动 4G 全国套餐图",
+    "carrier": "中国移动",
+    "network_type": "4G",
+    "monthly_data": "以套餐图为准",
+    "monthly_price": 0,
+    "setup_price": 29,
+    "badge": "性价比",
+    "best_for": "适合日常上网、备用网络和轻量使用场景。",
+    "coverage": "资费、速率和限制以图片为准",
+    "purchase_note": "可搭配入门设备，也可用于寄设备配卡。",
+    "description": "前台展示 4G 全国资费图。",
+    "features": [
+      "配卡费更低",
+      "适合轻量上网",
+      "适合随身 WiFi 搭配"
+    ],
+    "tags": [
+      "4G",
+      "全国",
+      "入门"
+    ],
+    "cover_image": "/media/plans/移动/移动4G全国.jpg",
+    "featured": true,
+    "status": "active",
+    "hot_rank": 10,
+    "sort_order": 3
+  },
+  {
+    "id": 2004,
+    "slug": "yd-4g-yunnan",
+    "name": "移动 4G 云南套餐图",
+    "carrier": "中国移动",
+    "network_type": "4G",
+    "monthly_data": "以套餐图为准",
+    "monthly_price": 0,
+    "setup_price": 29,
+    "badge": "云南地区",
+    "best_for": "适合云南地区场景参考。",
+    "coverage": "区域与使用条件以套餐图为准",
+    "purchase_note": "下单前请先查看套餐图说明。",
+    "description": "适合地区型客户资费展示。",
+    "features": [
+      "图片展示更直观",
+      "支持配卡下单",
+      "适合地区项目"
+    ],
+    "tags": [
+      "4G",
+      "云南",
+      "地区"
+    ],
+    "cover_image": "/media/plans/移动/移动4G云南.jpg",
+    "featured": false,
+    "status": "active",
+    "hot_rank": 0,
+    "sort_order": 4
+  },
+  {
+    "id": 2005,
+    "slug": "yd-4g-shandong",
+    "name": "移动 4G 山东套餐图",
+    "carrier": "中国移动",
+    "network_type": "4G",
+    "monthly_data": "以套餐图为准",
+    "monthly_price": 0,
+    "setup_price": 29,
+    "badge": "山东地区",
+    "best_for": "适合山东地区客户参考。",
+    "coverage": "使用范围以套餐图为准",
+    "purchase_note": "区域资费请以图片为准。",
+    "description": "区域化资费图展示。",
+    "features": [
+      "适合当地场景",
+      "支持设备搭配下单",
+      "下单路径清晰"
+    ],
+    "tags": [
+      "4G",
+      "山东",
+      "地区"
+    ],
+    "cover_image": "/media/plans/移动/移动4G山东.png",
+    "featured": false,
+    "status": "active",
+    "hot_rank": 0,
+    "sort_order": 5
+  },
+  {
+    "id": 2006,
+    "slug": "yd-4g-hunan",
+    "name": "移动 4G 湖南套餐图",
+    "carrier": "中国移动",
+    "network_type": "4G",
+    "monthly_data": "以套餐图为准",
+    "monthly_price": 0,
+    "setup_price": 29,
+    "badge": "湖南地区",
+    "best_for": "适合湖南地区用户选择。",
+    "coverage": "地区限制以套餐图为准",
+    "purchase_note": "不单卡出售，仅做设备配卡。",
+    "description": "地区型资费展示。",
+    "features": [
+      "图片主导展示",
+      "适合购买设备配卡",
+      "支持寄设备配卡"
+    ],
+    "tags": [
+      "4G",
+      "湖南",
+      "地区"
+    ],
+    "cover_image": "/media/plans/移动/移动4G湖南.png",
+    "featured": false,
+    "status": "active",
+    "hot_rank": 0,
+    "sort_order": 6
+  },
+  {
+    "id": 2007,
+    "slug": "yd-4g-xinjiang",
+    "name": "移动 4G 新疆套餐图",
+    "carrier": "中国移动",
+    "network_type": "4G",
+    "monthly_data": "以套餐图为准",
+    "monthly_price": 0,
+    "setup_price": 29,
+    "badge": "新疆地区",
+    "best_for": "适合新疆地区场景参考。",
+    "coverage": "以套餐图中的地区说明为准",
+    "purchase_note": "可配合设备购买或寄设备配卡。",
+    "description": "区域型 4G 套餐展示。",
+    "features": [
+      "地区资费清晰",
+      "可先看图再下单",
+      "支持人工审核付款"
+    ],
+    "tags": [
+      "4G",
+      "新疆",
+      "地区"
+    ],
+    "cover_image": "/media/plans/移动/移动4G新疆.jpg",
+    "featured": false,
+    "status": "active",
+    "hot_rank": 0,
+    "sort_order": 7
+  },
+  {
+    "id": 2008,
+    "slug": "lt-5g-quanguo",
+    "name": "联通 5G 全国套餐图",
+    "carrier": "中国联通",
+    "network_type": "5G",
+    "monthly_data": "以套餐图为准",
+    "monthly_price": 0,
+    "setup_price": 39,
+    "badge": "5G 主推",
+    "best_for": "适合对 5G 速率有要求的用户。",
+    "coverage": "资费详情与适用地区以套餐图为准",
+    "purchase_note": "先看图，再选设备或寄设备配卡。",
+    "description": "联通 5G 全国方案展示。",
+    "features": [
+      "适合 5G 热点设备",
+      "支持直接购买设备",
+      "支持寄设备配卡"
+    ],
+    "tags": [
+      "5G",
+      "联通",
+      "全国"
+    ],
+    "cover_image": "/media/plans/联通/联通5G全国.jpg",
+    "featured": true,
+    "status": "active",
+    "hot_rank": 10,
+    "sort_order": 8
+  },
+  {
+    "id": 2009,
+    "slug": "lt-4g-quanguo-new",
+    "name": "联通 4G 全国套餐图（新）",
+    "carrier": "中国联通",
+    "network_type": "4G",
+    "monthly_data": "以套餐图为准",
+    "monthly_price": 0,
+    "setup_price": 29,
+    "badge": "全国热销",
+    "best_for": "适合日常开机上网和性价比需求。",
+    "coverage": "详细资费与说明以图片为准",
+    "purchase_note": "可搭配入门型或主推型随身 WiFi 设备。",
+    "description": "首页重点展示的全国通用 4G 方案。",
+    "features": [
+      "通用性强",
+      "资费图信息完整",
+      "适合大多数用户"
+    ],
+    "tags": [
+      "4G",
+      "联通",
+      "新版"
+    ],
+    "cover_image": "/media/plans/联通/联通4G全国-新.png",
+    "featured": true,
+    "status": "active",
+    "hot_rank": 10,
+    "sort_order": 9
+  },
+  {
+    "id": 2010,
+    "slug": "lt-4g-quanguo",
+    "name": "联通 4G 全国套餐图",
+    "carrier": "中国联通",
+    "network_type": "4G",
+    "monthly_data": "以套餐图为准",
+    "monthly_price": 0,
+    "setup_price": 29,
+    "badge": "低门槛",
+    "best_for": "适合轻量使用和备用网络需求。",
+    "coverage": "以套餐图中的资费说明为准",
+    "purchase_note": "只做设备配卡，不单独售卡。",
+    "description": "联通 4G 全国图文展示。",
+    "features": [
+      "适合入门用户",
+      "支持人工审核订单",
+      "支持两种下单方式"
+    ],
+    "tags": [
+      "4G",
+      "联通",
+      "入门"
+    ],
+    "cover_image": "/media/plans/联通/联通4G全国.jpg",
+    "featured": false,
+    "status": "active",
+    "hot_rank": 0,
+    "sort_order": 10
+  },
+  {
+    "id": 2011,
+    "slug": "lt-4g-yunnan",
+    "name": "联通 4G 云南套餐图",
+    "carrier": "中国联通",
+    "network_type": "4G",
+    "monthly_data": "以套餐图为准",
+    "monthly_price": 0,
+    "setup_price": 29,
+    "badge": "云南地区",
+    "best_for": "适合云南地区参考使用。",
+    "coverage": "地区使用说明以图片为准",
+    "purchase_note": "下单前请先查看图片详情。",
+    "description": "适合地区项目资费展示。",
+    "features": [
+      "地区型资费",
+      "先看图再下单",
+      "支持设备搭配"
+    ],
+    "tags": [
+      "4G",
+      "云南",
+      "联通"
+    ],
+    "cover_image": "/media/plans/联通/联通4G云南.jpg",
+    "featured": false,
+    "status": "active",
+    "hot_rank": 0,
+    "sort_order": 11
+  },
+  {
+    "id": 2012,
+    "slug": "dx-4g-quanguo",
+    "name": "电信 4G 全国套餐图",
+    "carrier": "中国电信",
+    "network_type": "4G",
+    "monthly_data": "以套餐图为准",
+    "monthly_price": 0,
+    "setup_price": 29,
+    "badge": "稳定优先",
+    "best_for": "适合门店、办公点位和固定场景。",
+    "coverage": "速率、限制和适用范围以套餐图为准",
+    "purchase_note": "建议搭配 CPE 或大功率设备下单。",
+    "description": "电信全国 4G 资费图展示。",
+    "features": [
+      "固定场景更适合",
+      "可与 CPE 组合销售",
+      "支持寄设备配卡"
+    ],
+    "tags": [
+      "4G",
+      "电信",
+      "CPE"
+    ],
+    "cover_image": "/media/plans/电信/电信4G全国.png",
+    "featured": true,
+    "status": "active",
+    "hot_rank": 10,
+    "sort_order": 12
+  }
+]

@@ -1,0 +1,152 @@
+[
+  {
+    "id": 1001,
+    "slug": "mifi-4g-starter-bundle",
+    "title": "4G 随身 WiFi 入门套装",
+    "category": "bundle",
+    "can_purchase": true,
+    "featured": true,
+    "status": "active",
+    "price": 299,
+    "original_price": 399,
+    "stock": 36,
+    "sku": "BUNDLE-MIFI-4G-001",
+    "cover_image": null,
+    "gallery": [],
+    "tags": [
+      "随身WiFi",
+      "设备配卡",
+      "开箱即用"
+    ],
+    "supported_carriers": [
+      "移动",
+      "联通",
+      "电信"
+    ],
+    "network_type": "4G",
+    "device_type": "MIFI",
+    "short_description": "发设备、配好卡、到手即可联网，适合出差、直播、临时办公。",
+    "highlights": [
+      "设备 + 物联卡套餐一体发货",
+      "支持多运营商方案匹配",
+      "适合个人出差和团队临时用网"
+    ],
+    "plan_brief": "默认按设备场景匹配合适流量卡，具体资费以客服最终确认方案为准。",
+    "service_note": "下单后客服会联系确认卡方案与发货细节。",
+    "description": "<p>这是一款面向移动办公场景的入门型随身 WiFi 套装，我们会完成设备配卡和基础联网测试后发出。</p>",
+    "requires_customer_device_shipping": false,
+    "sort_order": 1
+  },
+  {
+    "id": 1002,
+    "slug": "cpe-5g-business-bundle",
+    "title": "5G CPE 商用组网套装",
+    "category": "bundle",
+    "can_purchase": true,
+    "featured": true,
+    "status": "active",
+    "price": 899,
+    "original_price": 1099,
+    "stock": 12,
+    "sku": "BUNDLE-CPE-5G-002",
+    "cover_image": null,
+    "gallery": [],
+    "tags": [
+      "CPE",
+      "商用组网",
+      "高速方案"
+    ],
+    "supported_carriers": [
+      "移动",
+      "电信"
+    ],
+    "network_type": "5G",
+    "device_type": "CPE",
+    "short_description": "适合门店、工作室、展会现场使用的 5G 设备配卡方案。",
+    "highlights": [
+      "更适合固定点位长时间运行",
+      "支持高并发联网场景",
+      "发货前完成设备和卡测试"
+    ],
+    "plan_brief": "根据使用地区与设备场景匹配更稳定的 5G 卡方案。",
+    "service_note": "默认包含设备、卡配置与开机测试，不含官方支付接口，需扫码后上传付款截图。",
+    "description": "<p>适合需要更稳定高速网络的商业场景，支持门店、直播间、临时展位等部署。</p>",
+    "requires_customer_device_shipping": false,
+    "sort_order": 2
+  },
+  {
+    "id": 1003,
+    "slug": "bring-your-own-device-card-config",
+    "title": "寄送设备来配卡服务",
+    "category": "service",
+    "can_purchase": true,
+    "featured": true,
+    "status": "active",
+    "price": 69,
+    "original_price": 99,
+    "stock": 999,
+    "sku": "SERVICE-BYOD-001",
+    "cover_image": null,
+    "gallery": [],
+    "tags": [
+      "寄送设备",
+      "配卡服务",
+      "兼容适配"
+    ],
+    "supported_carriers": [
+      "移动",
+      "联通",
+      "电信"
+    ],
+    "network_type": "4G/5G",
+    "device_type": "用户自带设备",
+    "short_description": "用户把自己的设备寄过来，我们帮忙配卡、测试、再寄回。",
+    "highlights": [
+      "适合已有设备但不会配卡的客户",
+      "支持寄来测试和方案匹配",
+      "支持返程快递发回"
+    ],
+    "plan_brief": "会根据设备型号、使用地区和流量需求匹配可用方案。",
+    "service_note": "此服务类订单会要求填写设备品牌、型号、问题说明和寄送单号。",
+    "description": "<p>如果你已有随身 WiFi、CPE 或其他联网设备，可以把设备寄过来，我们完成卡方案匹配、安装测试后再寄回。</p>",
+    "requires_customer_device_shipping": true,
+    "sort_order": 3
+  },
+  {
+    "id": 1004,
+    "slug": "traffic-card-solution-guide",
+    "title": "流量卡方案说明",
+    "category": "plan",
+    "can_purchase": false,
+    "featured": true,
+    "status": "active",
+    "price": 0,
+    "original_price": 0,
+    "stock": 9999,
+    "sku": "GUIDE-PLAN-001",
+    "cover_image": null,
+    "gallery": [],
+    "tags": [
+      "方案说明",
+      "资费介绍"
+    ],
+    "supported_carriers": [
+      "移动",
+      "联通",
+      "电信"
+    ],
+    "network_type": "4G/5G",
+    "device_type": "方案介绍",
+    "short_description": "流量卡主要用于设备配套和方案介绍，不做单独零售。",
+    "highlights": [
+      "重点是设备 + 卡整体方案",
+      "支持按地区和使用场景匹配",
+      "可配合寄送设备服务使用"
+    ],
+    "plan_brief": "流量卡不是独立单卖商品，主要用于设备配套发货或寄送设备后的配卡服务。",
+    "service_note": "如需单独了解流量方案，可先联系客服确认兼容性和资费区间。",
+    "description": "<p>本店的流量卡以设备配套和服务方案为主，不做纯卡零售。你可以先看方案介绍，再选择设备套装或寄送设备服务。</p>",
+    "requires_customer_device_shipping": false,
+    "sort_order": 4
+  }
+]
