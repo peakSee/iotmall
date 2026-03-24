@@ -48,14 +48,14 @@
     "network_type": "5G",
     "price": 399,
     "original_price": 499,
-    "stock": 18,
+    "stock": 17,
     "badge": "5G 热销",
     "short_description": "适合直播推流、多人共享热点、户外办公和高频使用场景。",
     "description": "可与主流 4G / 5G 套餐组合销售，是前台主推的 5G 移动网络设备。",
     "features": [
       "支持 5G / 4G",
       "适合高速上网",
-      "适合和 5G 套餐一起下单"
+      "适合与 5G 套餐一起下单"
     ],
     "tags": [
       "5G",

@@ -3,7 +3,7 @@
     "id": 17724888898,
     "phone": "17724888898",
     "username": "admin",
-    "password": "admin123456",
+    "password": "scrypt$b521802f4d332affe55af9de3aa65b0a$ba789d332ce6e56fdffdd96a9ce234007e83295fffac2dcb3fa6de50ae343a0d3960a5f31112bb6ebc2b33c5aaa03dbd21b8a6ec27ad1a1e745079618a99ea5d",
     "nickname": "管理员",
     "role": "admin"
   }

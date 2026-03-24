@@ -5,6 +5,7 @@ const { uploadPaymentProof } = require('../middleware/upload');
 const {
     FLOW_TYPES,
     buildOrderSummary,
+    commitStoreChanges,
     makeOrderNo,
     publicPathToDisk,
     readDevices,
@@ -13,9 +14,14 @@ const {
     readSettings,
     toInteger,
     toNumber,
-    writeDevices,
-    writeOrders,
 } = require('../utils/store');
+const { getEmsConfig, queryTrackItems, summarizeLatestTrack } = require('../utils/ems');
+const {
+    buildOrderNoticeSnapshot,
+    countUnreadOrderNotices,
+    markOrderNoticesRead,
+    syncOrderLogisticsUserNotices,
+} = require('../utils/user-notices');
 
 const router = express.Router();
 
@@ -51,13 +57,69 @@ function appendOrderLog(order, { operatorId = 0, operatorRole = '', action = '',
     });
 }
 
+function safeText(value, fallbackValue = '') {
+    return String(value ?? fallbackValue).trim();
+}
+
+function preferText(value, fallbackValue = '') {
+    return safeText(value) || safeText(fallbackValue);
+}
+
+function buildRuntimeEmsConfig(settings = {}) {
+    const base = getEmsConfig();
+    const logistics = settings?.logistics || {};
+    return {
+        ...base,
+        senderNo: preferText(logistics.sender_no, base.senderNo),
+        authorization: preferText(logistics.authorization, base.authorization),
+        signKey: preferText(logistics.sign_key, base.signKey),
+        senderName: preferText(logistics.sender_name, base.senderName),
+        senderPhone: preferText(logistics.sender_phone, base.senderPhone),
+        senderPostCode: preferText(logistics.sender_post_code, base.senderPostCode),
+        senderProv: preferText(logistics.sender_prov, base.senderProv),
+        senderCity: preferText(logistics.sender_city, base.senderCity),
+        senderCounty: preferText(logistics.sender_county, base.senderCounty),
+        senderAddress: preferText(logistics.sender_address, base.senderAddress),
+        bizProductNo: preferText(logistics.biz_product_no, base.bizProductNo),
+        bizProductId: preferText(logistics.biz_product_id, base.bizProductId),
+        contentsAttribute: preferText(logistics.contents_attribute, base.contentsAttribute),
+        defaultWeightGrams: preferText(logistics.default_weight_grams, base.defaultWeightGrams),
+        labelType: preferText(logistics.label_type, base.labelType),
+        logistics,
+    };
+}
+
+function buildClientEmsPayload(ems = {}) {
+    const source = ems && typeof ems === 'object' ? ems : {};
+    return {
+        ...source,
+        order_payload: null,
+        order_response: null,
+        label_payload: null,
+        label_response: null,
+        print_payload: null,
+        print_response: null,
+        track_payload: null,
+        track_response: null,
+        parse_payload: null,
+        parse_response: null,
+        validate_payload: null,
+        validate_response: null,
+        api_logs: [],
+    };
+}
+
 function enrichOrder(order) {
     return {
         ...order,
+        ems: buildClientEmsPayload(order.ems),
         summary_text: buildOrderSummary(order),
         total_amount: order.pricing.total_amount,
         can_cancel: canUserCancel(order),
         can_confirm: order.status === 'shipped',
+        tracking_number: order.ems?.waybill_no || order.merchant_tracking_number || '',
+        track_summary: order.ems?.track_summary || '',
+        unread_notice_count: countUnreadOrderNotices(order),
     };
 }
 
@@ -107,11 +169,11 @@ router.post(
             return res.status(400).json({ error: '请填写收货地址或回寄地址。' });
         }
 
-        const [settings, plans, devices, orders] = await Promise.all([readSettings(), readPlans(), readDevices(), readOrders()]);
+        const [settings, plans, devices] = await Promise.all([readSettings(), readPlans(), readDevices()]);
 
         if (!settings.payment_qrs[paymentMethod]) {
             removeTempFile(req.file);
-            return res.status(400).json({ error: '当前支付方式暂未配置收款码。' });
+            return res.status(400).json({ error: '当前支付方式尚未配置收款码。' });
         }
 
         const plan = plans.find((item) => item.id === planId && item.status === 'active');
@@ -143,7 +205,7 @@ router.post(
 
         if (flowType === 'ship_device' && !deviceBrand && !deviceModel) {
             removeTempFile(req.file);
-            return res.status(400).json({ error: '寄设备配卡请至少填写设备品牌或型号。' });
+            return res.status(400).json({ error: '寄设备配卡至少要填写品牌或型号。' });
         }
         if (flowType === 'ship_device' && !['yes', 'no', 'unknown'].includes(canInsertCard)) {
             removeTempFile(req.file);
@@ -161,12 +223,7 @@ router.post(
 
         if (Math.abs(totalAmount - toNumber(req.body.total_amount, totalAmount)) > 0.01) {
             removeTempFile(req.file);
-            return res.status(400).json({ error: '订单金额校验失败，请刷新页面后重试。' });
-        }
-
-        if (device) {
-            device.stock -= quantity;
-            await writeDevices(devices);
+            return res.status(400).json({ error: '订单金额校验失败，请刷新后重试。' });
         }
 
         const order = {
@@ -221,6 +278,13 @@ router.post(
             processing_logs: [],
             logistics_company: '',
             merchant_tracking_number: '',
+            ems: {
+                address_parse_source: shippingAddress,
+                receiver: {
+                    name: customerName,
+                    mobile: customerPhone,
+                },
+            },
             created_at: new Date().toISOString(),
             reviewed_at: null,
             shipped_at: null,
@@ -235,8 +299,17 @@ router.post(
             content: `${buildOrderSummary(order)}，已上传付款截图，等待人工审核`,
         });
 
-        orders.push(order);
-        await writeOrders(orders);
+        await commitStoreChanges({
+            devices: device
+                ? [
+                      {
+                          ...device,
+                          stock: device.stock - quantity,
+                      },
+                  ]
+                : [],
+            orders: [order],
+        });
 
         res.json({
             success: true,
@@ -251,9 +324,27 @@ router.get(
     '/',
     auth,
     asyncHandler(async (req, res) => {
-        const orders = (await readOrders())
-            .filter((order) => order.user_id === req.userId)
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        const sourceOrders = (await readOrders()).filter((order) => order.user_id === req.userId);
+        const changedOrders = [];
+
+        sourceOrders.forEach((order) => {
+            const previousSnapshot = buildOrderNoticeSnapshot({});
+            const { createdNotices } = syncOrderLogisticsUserNotices(order, {
+                previousSnapshot,
+            });
+            if (createdNotices.length) {
+                changedOrders.push(order);
+            }
+        });
+
+        if (changedOrders.length) {
+            await commitStoreChanges({
+                orders: changedOrders,
+            });
+        }
+
+        const orders = sourceOrders
+            .sort((left, right) => new Date(right.created_at) - new Date(left.created_at))
             .map(enrichOrder);
 
         res.json(orders);
@@ -265,8 +356,7 @@ router.put(
     auth,
     asyncHandler(async (req, res) => {
         const orderId = toInteger(req.params.id, 0);
-        const orders = await readOrders();
-        const order = orders.find((item) => item.id === orderId && item.user_id === req.userId);
+        const order = (await readOrders()).find((item) => item.id === orderId && item.user_id === req.userId);
 
         if (!order) {
             return res.status(404).json({ error: '订单不存在。' });
@@ -275,24 +365,30 @@ router.put(
             return res.status(400).json({ error: '当前订单状态不支持取消。' });
         }
 
-        if (order.flow_type === 'buy_device' && order.device_id) {
-            const devices = await readDevices();
-            const device = devices.find((item) => item.id === order.device_id);
-            if (device) {
-                device.stock += order.quantity;
-                await writeDevices(devices);
-            }
-        }
-
         order.status = 'cancelled';
         order.cancelled_at = new Date().toISOString();
         appendOrderLog(order, {
             operatorId: req.userId,
             operatorRole: 'user',
             action: '用户取消订单',
-            content: '用户已主动取消当前订单',
+            content: '用户主动取消了当前订单',
         });
-        await writeOrders(orders);
+
+        let updatedDevice = null;
+        if (order.flow_type === 'buy_device' && order.device_id) {
+            const device = (await readDevices()).find((item) => item.id === order.device_id);
+            if (device) {
+                updatedDevice = {
+                    ...device,
+                    stock: device.stock + order.quantity,
+                };
+            }
+        }
+
+        await commitStoreChanges({
+            devices: updatedDevice ? [updatedDevice] : [],
+            orders: [order],
+        });
 
         res.json({ success: true });
     }),
@@ -303,14 +399,13 @@ router.put(
     auth,
     asyncHandler(async (req, res) => {
         const orderId = toInteger(req.params.id, 0);
-        const orders = await readOrders();
-        const order = orders.find((item) => item.id === orderId && item.user_id === req.userId);
+        const order = (await readOrders()).find((item) => item.id === orderId && item.user_id === req.userId);
 
         if (!order) {
             return res.status(404).json({ error: '订单不存在。' });
         }
         if (order.status !== 'shipped') {
-            return res.status(400).json({ error: '只有已发货订单才能确认收货。' });
+            return res.status(400).json({ error: '只有已发货订单才可以确认收货。' });
         }
 
         order.status = 'completed';
@@ -321,7 +416,10 @@ router.put(
             action: '用户确认收货',
             content: '用户已确认收到设备',
         });
-        await writeOrders(orders);
+
+        await commitStoreChanges({
+            orders: [order],
+        });
 
         res.json({ success: true });
     }),
@@ -333,8 +431,7 @@ router.put(
     uploadPaymentProof,
     asyncHandler(async (req, res) => {
         const orderId = toInteger(req.params.id, 0);
-        const orders = await readOrders();
-        const order = orders.find((item) => item.id === orderId && item.user_id === req.userId);
+        const order = (await readOrders()).find((item) => item.id === orderId && item.user_id === req.userId);
 
         if (!order) {
             removeTempFile(req.file);
@@ -360,11 +457,149 @@ router.put(
             operatorId: req.userId,
             operatorRole: 'user',
             action: '补传付款截图',
-            content: '用户已重新上传新的付款截图',
+            content: '用户重新上传了新的付款截图',
         });
-        await writeOrders(orders);
+
+        await commitStoreChanges({
+            orders: [order],
+        });
 
         res.json({ success: true, payment_proof: order.payment_proof });
+    }),
+);
+
+router.post(
+    '/:id/ems/tracks/sync',
+    auth,
+    asyncHandler(async (req, res) => {
+        const orderId = toInteger(req.params.id, 0);
+        const [orders, settings] = await Promise.all([readOrders(), readSettings()]);
+        const order = orders.find((item) => item.id === orderId && item.user_id === req.userId);
+
+        if (!order) {
+            return res.status(404).json({ error: '订单不存在。' });
+        }
+
+        const trackingNumber = order.ems?.waybill_no || order.merchant_tracking_number;
+        if (!trackingNumber) {
+            return res.status(400).json({ error: '当前订单还没有快递单号。' });
+        }
+
+        try {
+            const previousNoticeSnapshot = buildOrderNoticeSnapshot(order);
+            const runtimeConfig = buildRuntimeEmsConfig(settings);
+            const { response, items } = await queryTrackItems(trackingNumber, order.ems?.tracking_direction || '0', {
+                config: runtimeConfig,
+            });
+            order.ems = {
+                ...order.ems,
+                last_serial_no: response.serialNo || order.ems?.last_serial_no || '',
+                last_error: '',
+                track_items: items,
+                track_summary: summarizeLatestTrack(items),
+                last_track_sync_at: new Date().toISOString(),
+                auto_track_sync_failure_streak: 0,
+                auto_track_sync_last_error: '',
+                auto_track_sync_last_success_at: new Date().toISOString(),
+            };
+            syncOrderLogisticsUserNotices(order, {
+                previousSnapshot: previousNoticeSnapshot,
+                markAsRead: true,
+            });
+
+            appendOrderLog(order, {
+                operatorId: req.userId,
+                operatorRole: 'user',
+                action: '刷新物流轨迹',
+                content: items.length ? `已同步 ${items.length} 条 EMS 轨迹` : '当前暂无新的 EMS 轨迹',
+            });
+
+            await commitStoreChanges({
+                orders: [order],
+            });
+
+            res.json({
+                success: true,
+                tracks: order.ems.track_items,
+                track_summary: order.ems.track_summary,
+                last_track_sync_at: order.ems.last_track_sync_at,
+            });
+        } catch (error) {
+            order.ems = {
+                ...order.ems,
+                last_error: error?.response?.retMsg || error?.message || 'EMS 轨迹同步失败',
+                last_serial_no: error?.response?.serialNo || order.ems?.last_serial_no || '',
+            };
+            await commitStoreChanges({
+                orders: [order],
+            });
+            return res.status(400).json({ error: order.ems.last_error });
+        }
+    }),
+);
+
+router.post(
+    '/:id/notices/read',
+    auth,
+    asyncHandler(async (req, res) => {
+        const orderId = toInteger(req.params.id, 0);
+        const orders = await readOrders();
+        const order = orders.find((item) => item.id === orderId && item.user_id === req.userId);
+
+        if (!order) {
+            return res.status(404).json({ error: '订单不存在。' });
+        }
+
+        const noticeIds = Array.isArray(req.body.notice_ids) ? req.body.notice_ids : [];
+        const { changed, center, unreadCount } = markOrderNoticesRead(order, {
+            noticeIds,
+            readAll: req.body.read_all !== false,
+        });
+
+        if (changed) {
+            await commitStoreChanges({
+                orders: [order],
+            });
+        }
+
+        res.json({
+            success: true,
+            changed,
+            unread_notice_count: unreadCount,
+            user_notice_center: center,
+        });
+    }),
+);
+
+router.post(
+    '/notices/read-all',
+    auth,
+    asyncHandler(async (req, res) => {
+        const orders = (await readOrders()).filter((item) => item.user_id === req.userId);
+        const changedOrders = [];
+        let unreadCount = 0;
+
+        orders.forEach((order) => {
+            const result = markOrderNoticesRead(order, {
+                readAll: true,
+            });
+            unreadCount += result.unreadCount;
+            if (result.changed) {
+                changedOrders.push(order);
+            }
+        });
+
+        if (changedOrders.length) {
+            await commitStoreChanges({
+                orders: changedOrders,
+            });
+        }
+
+        res.json({
+            success: true,
+            changed_order_count: changedOrders.length,
+            unread_notice_count: unreadCount,
+        });
     }),
 );
 

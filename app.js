@@ -1,8 +1,11 @@
+require('./utils/load-env');
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
 const { UPLOAD_DIR, bootstrapData } = require('./utils/store');
+const adminRouter = require('./routes/admin');
 
 const DEFAULT_PORT = Number(process.env.PORT) || 3000;
 const PLAN_MEDIA_DIR = decodeURIComponent('%E5%A5%97%E9%A4%90%E5%9B%BE%E7%89%87');
@@ -22,7 +25,7 @@ function createServer() {
     app.use('/api/auth', require('./routes/auth'));
     app.use('/api/storefront', require('./routes/storefront'));
     app.use('/api/orders', require('./routes/orders'));
-    app.use('/api/admin', require('./routes/admin'));
+    app.use('/api/admin', adminRouter);
 
     app.get('/', (req, res) => {
         res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -57,10 +60,16 @@ function createServer() {
 
 async function startServer({ port = DEFAULT_PORT } = {}) {
     await bootstrapData();
+    if (typeof adminRouter.recoverEmsWorkflowQueueOnStartup === 'function') {
+        await adminRouter.recoverEmsWorkflowQueueOnStartup();
+    }
 
     const app = createServer();
     return await new Promise((resolve, reject) => {
         const server = app.listen(port, () => {
+            if (typeof adminRouter.startEmsTrackAutoSyncScheduler === 'function') {
+                adminRouter.startEmsTrackAutoSyncScheduler();
+            }
             const address = server.address();
             const actualPort = typeof address === 'object' && address ? address.port : port;
             console.log(`Server running at http://localhost:${actualPort}`);
@@ -71,9 +80,16 @@ async function startServer({ port = DEFAULT_PORT } = {}) {
     });
 }
 
+function formatStartupError(error, port = DEFAULT_PORT) {
+    if (error?.code === 'EADDRINUSE') {
+        return `端口 ${port} 已被占用。当前项目很可能已经在运行，请直接打开 http://localhost:${port} 或先关闭占用该端口的进程后再启动。`;
+    }
+    return error;
+}
+
 if (require.main === module) {
     startServer().catch((error) => {
-        console.error('Failed to start server:', error);
+        console.error('Failed to start server:', formatStartupError(error));
         process.exit(1);
     });
 }

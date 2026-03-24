@@ -1,48 +1,54 @@
 # 宝塔 Ubuntu 24 部署说明
 
 ## 1. 服务器准备
-
 - 安装 `Node.js 18+`
 - 安装 `PM2`
 - 安装并启用 `Nginx`
-- 确保服务器可以访问你的 MySQL
+- 如果使用 MySQL，先准备好数据库和账号
 
 ## 2. 上传项目
-
 把项目上传到：
 
 ```bash
 /www/wwwroot/iot-mall
 ```
 
-进入项目目录后安装依赖：
+进入目录后安装依赖：
 
 ```bash
 npm install
 ```
 
 ## 3. 配置环境变量
+建议先复制 `.env.example`，再按实际环境填写。
 
-项目当前直接读取系统环境变量。
-
-建议至少配置下面这些变量：
+最小可运行配置：
 
 ```bash
 PORT=3000
-JWT_SECRET=请替换成你自己的长随机密钥
-
-MYSQL_HOST=149.88.95.34
-MYSQL_PORT=3306
-MYSQL_DATABASE=iotmall
-MYSQL_USER=iotmall
-MYSQL_PASSWORD=MPDENDB2A4J86TrK
+JWT_SECRET=replace-with-a-long-random-secret
+STORAGE_DRIVER=json
 
 ADMIN_PHONE=17724888898
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin123456
+ADMIN_PASSWORD=replace-with-a-strong-password
 ```
 
-如果你使用宝塔的 PM2 管理器，可以直接在 PM2 的环境变量里填写。
+如果要使用 MySQL，把存储模式切到 `mysql`，并补齐以下配置：
+
+```bash
+STORAGE_DRIVER=mysql
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_DATABASE=iot_mall
+MYSQL_USER=replace_me
+MYSQL_PASSWORD=replace_me
+```
+
+说明：
+- `JWT_SECRET` 必须使用随机长字符串
+- 生产环境不要使用默认管理员密码
+- 如果首次启动没填 `ADMIN_PASSWORD`，系统会生成一次性管理员密码并打印到日志里
 
 ## 4. 启动项目
 
@@ -52,57 +58,53 @@ pm2 save
 pm2 startup
 ```
 
-启动后默认监听：
+默认监听地址：
 
 ```bash
 http://127.0.0.1:3000
 ```
 
 ## 5. 配置 Nginx 反向代理
-
 把站点反向代理到：
 
 ```bash
 http://127.0.0.1:3000
 ```
 
-## 6. 静态资源目录
-
-部署时请确保这些目录一起上传：
+## 6. 静态目录
+部署时请确认这些目录已上传并具备读写权限：
 
 - `uploads`
 - `套餐图片`
 - `设备图片`
-- `收款码`
 
-## 7. MySQL 说明
+## 7. 存储说明
 
-项目启动后会自动：
+### `json` 模式
+- 适合本地开发、小规模部署、快速演示
+- 数据保存在 `data/*.json`
+- 不依赖外部 MySQL
 
-- 连接 MySQL
-- 自动创建 `users / plans / devices / orders / settings` 表
-- 首次启动时从 `data/*.json` 导入旧数据
-- 自动补齐管理员账号
+### `mysql` 模式
+- 适合正式环境
+- 应用启动时会自动建表
+- 首次启动时，如果表为空，会从 `data/*.json` 导入初始数据
 
-也就是说，你不需要再手动建表。
-
-## 8. 前后台地址
-
-前台首页：
+## 8. 访问地址
+前台：
 
 ```bash
 /
 ```
 
-后台地址：
+后台：
 
 ```bash
 /admin
 ```
 
-## 9. 建议
-
-- 生产环境务必修改默认后台账号密码
-- `JWT_SECRET` 不要使用演示值
-- 建议定期备份 MySQL 数据库和 `uploads` 目录
-- 如果未来订单量继续增大，可以再把 MySQL 读写改成更细粒度的 SQL，而不是当前这种“兼顾迁移速度和稳定性”的结构
+## 9. 生产建议
+- 使用 `mysql` 模式
+- 立即修改管理员账号和密码
+- 定期备份数据库和 `uploads`
+- 给 `.env` 做权限隔离，不要提交到仓库

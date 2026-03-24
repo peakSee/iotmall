@@ -33,7 +33,7 @@
     "payment_proof": "/uploads/payment_1774264845362.jpg",
     "customer_name": "管理员",
     "customer_phone": "17724888898",
-    "shipping_address": "河南省新乡市原阳县福宁集镇张大夫寨",
+    "shipping_address": "河南省新乡市原阳县福宁集镇张大夫村",
     "remark": "速度发货谢谢",
     "device_submission": {
       "brand": "",
@@ -46,12 +46,1366 @@
     },
     "admin_note": "",
     "internal_tags": [],
-    "processing_logs": [],
+    "processing_logs": [
+      {
+        "time": "2026-03-24T21:19:18.799Z",
+        "operator_id": 0,
+        "operator_role": "system-auto",
+        "action": "同步EMS轨迹",
+        "content": "当前暂无 EMS 轨迹"
+      }
+    ],
     "logistics_company": "邮政速递",
     "merchant_tracking_number": "sssssss",
+    "ems": {
+      "address_parse_source": "",
+      "address_parse_candidates": [],
+      "receiver": {
+        "name": "",
+        "mobile": "",
+        "phone": "",
+        "post_code": "",
+        "prov": "",
+        "city": "",
+        "county": "",
+        "address": ""
+      },
+      "sender": {
+        "name": "",
+        "mobile": "",
+        "phone": "",
+        "post_code": "",
+        "prov": "",
+        "city": "",
+        "county": "",
+        "address": ""
+      },
+      "ecommerce_user_id": "",
+      "logistics_order_no": "",
+      "waybill_no": "sssssss",
+      "route_code": "",
+      "package_code": "",
+      "package_code_name": "",
+      "mark_destination_code": "",
+      "mark_destination_name": "",
+      "biz_product_no": "10",
+      "biz_product_id": "",
+      "contents_attribute": "3",
+      "package_weight": "500",
+      "label_type": "129",
+      "label_url": "",
+      "label_file": "",
+      "label_generated_at": null,
+      "address_parsed_at": null,
+      "waybill_created_at": null,
+      "label_requested_at": null,
+      "print_status": "",
+      "print_mode": "",
+      "print_message": "",
+      "print_attempted_at": null,
+      "printed_at": null,
+      "last_serial_no": "1d07e594-b29c-45b9-ab67-3f7b77a22463",
+      "last_error": "",
+      "last_action": "track-sync",
+      "last_action_at": "2026-03-24T21:19:18.799Z",
+      "reachable": false,
+      "reachable_message": "参数据加密错误，请检查加密方式是否正确！",
+      "reachable_checked_at": "2026-03-24T03:01:38.730Z",
+      "tracking_direction": "0",
+      "track_summary": "",
+      "track_items": [],
+      "last_track_sync_at": "2026-03-24T21:19:18.799Z",
+      "api_logs": [
+        {
+          "action": "print",
+          "status": "error",
+          "time": "2026-03-24T06:02:59.715Z",
+          "ret_code": "B0001",
+          "ret_msg": "查询预告失败",
+          "serial_no": "265c38d7-2145-465b-ad42-2ef0cb03e8d6",
+          "request": {
+            "labelFile": "",
+            "printerName": "HPRT N31BT",
+            "mode": "auto"
+          },
+          "response": {
+            "serialNo": "265c38d7-2145-465b-ad42-2ef0cb03e8d6",
+            "retCode": "B0001",
+            "retMsg": "查询预告失败",
+            "retBody": "",
+            "retDate": "2026-03-24 14:02:58",
+            "success": false,
+            "rawText": "{\"serialNo\":\"265c38d7-2145-465b-ad42-2ef0cb03e8d6\",\"retCode\":\"B0001\",\"retMsg\":\"查询预告失败\",\"retBody\":\"\",\"retDate\":\"2026-03-24 14:02:58\",\"success\":false}"
+          }
+        },
+        {
+          "action": "track-sync",
+          "status": "success",
+          "time": "2026-03-24T21:19:18.799Z",
+          "ret_code": "00000",
+          "ret_msg": "当前邮件无客户信息！",
+          "serial_no": "1d07e594-b29c-45b9-ab67-3f7b77a22463",
+          "request": {
+            "waybillNo": "sssssss",
+            "direction": "0"
+          },
+          "response": {
+            "serialNo": "1d07e594-b29c-45b9-ab67-3f7b77a22463",
+            "retCode": "00000",
+            "retMsg": "当前邮件无客户信息！",
+            "retBody": {
+              "responseItems": []
+            },
+            "retDate": "2026-03-25 05:19:17",
+            "success": true,
+            "rawText": "{\"serialNo\":\"1d07e594-b29c-45b9-ab67-3f7b77a22463\",\"retCode\":\"00000\",\"retMsg\":\"当前邮件无客户信息！\",\"retBody\":\"{\\\"responseItems\\\":[]}\",\"retDate\":\"2026-03-25 05:19:17\",\"success\":true}"
+          }
+        }
+      ],
+      "workflow_task": {
+        "id": "",
+        "mode": "single",
+        "status": "idle",
+        "current_step": "",
+        "error": "",
+        "include_track": true,
+        "initiator_id": 0,
+        "initiator_role": "",
+        "enqueued_at": null,
+        "started_at": null,
+        "finished_at": null,
+        "updated_at": null,
+        "steps": {
+          "parse": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "validate": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "create": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "label": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "print": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "track": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          }
+        }
+      },
+      "order_payload": null,
+      "order_response": null,
+      "label_payload": null,
+      "label_response": null,
+      "print_payload": null,
+      "print_response": null,
+      "track_payload": {
+        "waybillNo": "sssssss",
+        "direction": "0"
+      },
+      "track_response": {
+        "serialNo": "1d07e594-b29c-45b9-ab67-3f7b77a22463",
+        "retCode": "00000",
+        "retMsg": "当前邮件无客户信息！",
+        "retBody": {
+          "responseItems": []
+        },
+        "retDate": "2026-03-25 05:19:17",
+        "success": true,
+        "rawText": "{\"serialNo\":\"1d07e594-b29c-45b9-ab67-3f7b77a22463\",\"retCode\":\"00000\",\"retMsg\":\"当前邮件无客户信息！\",\"retBody\":\"{\\\"responseItems\\\":[]}\",\"retDate\":\"2026-03-25 05:19:17\",\"success\":true}"
+      },
+      "parse_payload": null,
+      "parse_response": null,
+      "validate_payload": null,
+      "validate_response": null
+    },
     "created_at": "2026-03-23T11:20:45.368Z",
     "reviewed_at": "2026-03-23T13:13:17.575Z",
     "shipped_at": "2026-03-23T13:13:17.575Z",
+    "completed_at": null,
+    "cancelled_at": null
+  },
+  {
+    "id": 1774321543737,
+    "order_no": "IOT202603247844",
+    "user_id": 17724888898,
+    "flow_type": "buy_device",
+    "status": "shipped",
+    "plan_id": 2001,
+    "device_id": 3002,
+    "quantity": 1,
+    "plan_snapshot": {
+      "name": "移动 5G 全国套餐图",
+      "monthly_data": "以套餐图为准",
+      "monthly_price": 0,
+      "setup_price": 39,
+      "carrier": "中国移动",
+      "network_type": "5G"
+    },
+    "device_snapshot": {
+      "name": "中兴 F50 5G 随身 WiFi",
+      "model": "ZTE F50",
+      "category": "portable_wifi",
+      "price": 399,
+      "network_type": "5G"
+    },
+    "pricing": {
+      "plan_amount": 39,
+      "device_amount": 399,
+      "service_amount": 0,
+      "total_amount": 438
+    },
+    "payment_method": "wechat",
+    "payment_proof": "/uploads/payment_1774321543733_c2b13bb9dc945508.jpg",
+    "customer_name": "一起山顶见",
+    "customer_phone": "17724888898",
+    "shipping_address": "河南省新乡市原阳县福宁集镇张打夫寨村",
+    "remark": "加急",
+    "device_submission": {
+      "brand": "",
+      "model": "",
+      "can_insert_card": "unknown",
+      "remove_control": "unknown",
+      "condition": "",
+      "notes": "",
+      "outbound_tracking": ""
+    },
+    "admin_note": "",
+    "internal_tags": [],
+    "processing_logs": [
+      {
+        "time": "2026-03-24T03:05:43.737Z",
+        "operator_id": 17724888898,
+        "operator_role": "user",
+        "action": "用户提交订单",
+        "content": "中兴 F50 5G 随身 WiFi x1 / 移动 5G 全国套餐图，已上传付款截图，等待人工审核"
+      },
+      {
+        "time": "2026-03-24T03:22:49.377Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "EMS地址解析",
+        "content": "已解析为 河南省新乡市原阳县"
+      },
+      {
+        "time": "2026-03-24T03:41:36.513Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "EMS可达校验",
+        "content": "该地址信息可达！"
+      },
+      {
+        "time": "2026-03-24T03:41:41.583Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "EMS地址解析",
+        "content": "已解析为 河南省新乡市原阳县"
+      },
+      {
+        "time": "2026-03-24T03:45:49.321Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "EMS可达校验",
+        "content": "该地址信息可达！"
+      },
+      {
+        "time": "2026-03-24T03:45:50.464Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "EMS地址解析",
+        "content": "已解析为 河南省新乡市原阳县"
+      },
+      {
+        "time": "2026-03-24T03:52:27.212Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "EMS地址解析",
+        "content": "已解析为 河南省新乡市原阳县"
+      },
+      {
+        "time": "2026-03-24T03:52:28.220Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "EMS可达校验",
+        "content": "该地址信息可达！"
+      },
+      {
+        "time": "2026-03-24T03:52:30.066Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "EMS建单成功",
+        "content": "已获取 EMS 运单号 8435404113413"
+      },
+      {
+        "time": "2026-03-24T03:52:37.239Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "获取EMS面单",
+        "content": "已生成面单文件 /uploads/ems-labels/IOT202603247844-8435404113413.pdf"
+      },
+      {
+        "time": "2026-03-24T04:02:45.319Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "打印EMS面单",
+        "content": "系统未能直接静默打印 PDF，已自动打开面单文件。请在打开的窗口中按 Ctrl+P，并选择打印机 HPRT N31BT 手动打印。"
+      },
+      {
+        "time": "2026-03-24T04:03:14.919Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "同步EMS轨迹",
+        "content": "当前暂无 EMS 轨迹"
+      },
+      {
+        "time": "2026-03-24T04:03:16.250Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "同步EMS轨迹",
+        "content": "当前暂无 EMS 轨迹"
+      },
+      {
+        "time": "2026-03-24T04:03:16.877Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "同步EMS轨迹",
+        "content": "当前暂无 EMS 轨迹"
+      },
+      {
+        "time": "2026-03-24T05:24:47.669Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "打印EMS面单",
+        "content": "未能直接静默打印，已打开面单文件，请手动打印。"
+      },
+      {
+        "time": "2026-03-24T05:25:16.672Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "状态更",
+        "content": "订单状态由 pending_payment_review 更新为 shipped"
+      },
+      {
+        "time": "2026-03-24T05:58:27.145Z",
+        "operator_id": 17724888898,
+        "operator_role": "user",
+        "action": "刷新物流轨迹",
+        "content": "当前暂无新的 EMS 轨迹"
+      },
+      {
+        "time": "2026-03-24T05:58:28.753Z",
+        "operator_id": 17724888898,
+        "operator_role": "user",
+        "action": "刷新物流轨迹",
+        "content": "当前暂无新的 EMS 轨迹"
+      },
+      {
+        "time": "2026-03-24T05:58:31.978Z",
+        "operator_id": 17724888898,
+        "operator_role": "user",
+        "action": "刷新物流轨迹",
+        "content": "当前暂无新的 EMS 轨迹"
+      },
+      {
+        "time": "2026-03-24T07:06:57.292Z",
+        "operator_id": 17724888898,
+        "operator_role": "user",
+        "action": "刷新物流轨迹",
+        "content": "当前暂无新的 EMS 轨迹"
+      },
+      {
+        "time": "2026-03-24T21:19:18.851Z",
+        "operator_id": 0,
+        "operator_role": "system-auto",
+        "action": "同步EMS轨迹",
+        "content": "当前暂无 EMS 轨迹"
+      }
+    ],
+    "logistics_company": "EMS",
+    "merchant_tracking_number": "8435404113413",
+    "ems": {
+      "address_parse_source": "河南省新乡市原阳县福宁集镇张打夫寨村",
+      "address_parse_candidates": [
+        {
+          "whole_address": "",
+          "prov": "河南省",
+          "city": "新乡市",
+          "county": "原阳县",
+          "address": "",
+          "pro_code": "410000",
+          "city_code": "410700",
+          "county_code": "410725",
+          "district_code": "410725"
+        }
+      ],
+      "receiver": {
+        "name": "一起山顶见",
+        "mobile": "17724888898",
+        "phone": "",
+        "post_code": "",
+        "prov": "河南省",
+        "city": "新乡市",
+        "county": "原阳县",
+        "address": "福宁集镇张打夫寨村"
+      },
+      "sender": {
+        "name": "一起山顶见",
+        "mobile": "17724888898",
+        "phone": "",
+        "post_code": "",
+        "prov": "河南省",
+        "city": "新乡市",
+        "county": "原阳县",
+        "address": "福宁集镇张大夫寨村"
+      },
+      "ecommerce_user_id": "IOT202603247844-1774321543737",
+      "logistics_order_no": "IOT202603247844",
+      "waybill_no": "8435404113413",
+      "route_code": "16Z-16Z-Y13-020",
+      "package_code": "",
+      "package_code_name": "Y13",
+      "mark_destination_code": "Y13",
+      "mark_destination_name": "Y13",
+      "biz_product_no": "10",
+      "biz_product_id": "",
+      "contents_attribute": "3",
+      "package_weight": "500",
+      "label_type": "129",
+      "label_url": "http://211.156.195.16/oss-jd-prd-psc-no-post/orderInfo%2FPDFpicture%2F20260324%2F1100217822419%2FIOT202603247844-2026-03-24+11%3A52%3A29.000%2F33142195-54d8-4355-bcb5-293fc8843142.pdf",
+      "label_file": "/uploads/ems-labels/IOT202603247844-8435404113413.pdf",
+      "label_generated_at": "2026-03-24T03:52:37.239Z",
+      "address_parsed_at": null,
+      "waybill_created_at": null,
+      "label_requested_at": null,
+      "print_status": "open",
+      "print_mode": "open",
+      "print_message": "未能直接静默打印，已打开面单文件，请手动打印。",
+      "print_attempted_at": "2026-03-24T05:24:47.669Z",
+      "printed_at": null,
+      "last_serial_no": "2245c312-1d50-49ed-92b4-0d7e9ac8c03a",
+      "last_error": "",
+      "last_action": "track-sync",
+      "last_action_at": "2026-03-24T21:19:18.851Z",
+      "reachable": true,
+      "reachable_message": "该地址信息可达！",
+      "reachable_checked_at": "2026-03-24T03:52:30.066Z",
+      "tracking_direction": "0",
+      "track_summary": "",
+      "track_items": [],
+      "last_track_sync_at": "2026-03-24T21:19:18.851Z",
+      "api_logs": [
+        {
+          "action": "print",
+          "status": "success",
+          "time": "2026-03-24T05:24:47.669Z",
+          "ret_code": "",
+          "ret_msg": "未能直接静默打印，已打开面单文件，请手动打印。",
+          "serial_no": "",
+          "request": {
+            "labelFile": "/uploads/ems-labels/IOT202603247844-8435404113413.pdf",
+            "printerName": "HPRT N31BT",
+            "mode": "auto"
+          },
+          "response": {
+            "mode": "open",
+            "dispatched": false,
+            "message": "未能直接静默打印，已打开面单文件，请手动打印。",
+            "labelFile": "/uploads/ems-labels/IOT202603247844-8435404113413.pdf",
+            "fallbackReason": "sumatra:未检测到 SumatraPDF，可在后台物流设置里填写 SumatraPDF.exe 路径。 | powershell:Start-Process : ���ڳ������´����޷����д�����: û��Ӧ�ó�����˲�����ָ���ļ��й�������\r\n����λ�� ��:1 �ַ�: 1\r\n+ Start-Process -FilePath 'C:\\Users\\25647\\Desktop\\iot-mall\\uploads\\ems- ...\r\n+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : InvalidOperation: (:) [Start-Process]��InvalidOperationException\r\n    + FullyQualifiedErrorId : InvalidOperationException,Microsoft.PowerShell.Commands.StartProcessCommand"
+          }
+        },
+        {
+          "action": "track-sync",
+          "status": "success",
+          "time": "2026-03-24T21:19:18.851Z",
+          "ret_code": "00000",
+          "ret_msg": "当前邮件无客户信息！",
+          "serial_no": "2245c312-1d50-49ed-92b4-0d7e9ac8c03a",
+          "request": {
+            "waybillNo": "8435404113413",
+            "direction": "0"
+          },
+          "response": {
+            "serialNo": "2245c312-1d50-49ed-92b4-0d7e9ac8c03a",
+            "retCode": "00000",
+            "retMsg": "当前邮件无客户信息！",
+            "retBody": {
+              "responseItems": []
+            },
+            "retDate": "2026-03-25 05:19:17",
+            "success": true,
+            "rawText": "{\"serialNo\":\"2245c312-1d50-49ed-92b4-0d7e9ac8c03a\",\"retCode\":\"00000\",\"retMsg\":\"当前邮件无客户信息！\",\"retBody\":\"{\\\"responseItems\\\":[]}\",\"retDate\":\"2026-03-25 05:19:17\",\"success\":true}"
+          }
+        }
+      ],
+      "workflow_task": {
+        "id": "",
+        "mode": "single",
+        "status": "idle",
+        "current_step": "",
+        "error": "",
+        "include_track": true,
+        "initiator_id": 0,
+        "initiator_role": "",
+        "enqueued_at": null,
+        "started_at": null,
+        "finished_at": null,
+        "updated_at": null,
+        "steps": {
+          "parse": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "validate": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "create": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "label": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "print": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "track": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          }
+        }
+      },
+      "order_payload": {
+        "ecommerceUserId": "IOT202603247844-1774321543737",
+        "logisticsOrderNo": "IOT202603247844",
+        "createdTime": "2026-03-24 11:52:29",
+        "senderNo": "1100217822419",
+        "contentsAttribute": "3",
+        "bizProductNo": "10",
+        "bizProductId": "",
+        "weight": 500,
+        "remarks": "订单:IOT202603247844；商品:中兴 F50 5G 随身 WiFi x1 / 移动 5G 全国套餐图；备注:加急",
+        "sender": {
+          "name": "一起山顶见",
+          "mobile": "17724888898",
+          "phone": "",
+          "postCode": "",
+          "prov": "河南省",
+          "city": "新乡市",
+          "county": "原阳县",
+          "address": "福宁集镇张大夫寨村"
+        },
+        "receiver": {
+          "name": "一起山顶见",
+          "mobile": "17724888898",
+          "phone": "",
+          "postCode": "",
+          "prov": "河南省",
+          "city": "新乡市",
+          "county": "原阳县",
+          "address": "福宁集镇张打夫寨村"
+        },
+        "cargos": [
+          {
+            "cargoName": "中兴 F50 5G 随身 WiFi",
+            "cargoCategory": "移动 5G 全国套餐图",
+            "cargoQuantity": 1,
+            "cargoValue": 438,
+            "cargoWeight": 500
+          }
+        ]
+      },
+      "order_response": {
+        "serialNo": "f48f8141-a936-4355-924a-d0dee1b4649d",
+        "retCode": "00000",
+        "retMsg": "成功！",
+        "retBody": {
+          "routeCode": "16Z-16Z-Y13-020",
+          "markDestinationCode": "Y13",
+          "packageCode": "",
+          "logisticsOrderNo": "IOT202603247844",
+          "packageCodeName": "Y13",
+          "markDestinationName": "Y13",
+          "waybillNo": "8435404113413"
+        },
+        "retDate": "2026-03-24 11:52:29",
+        "success": true,
+        "rawText": "{\"serialNo\":\"f48f8141-a936-4355-924a-d0dee1b4649d\",\"retCode\":\"00000\",\"retMsg\":\"成功！\",\"retBody\":\"{\\\"routeCode\\\":\\\"16Z-16Z-Y13-020\\\",\\\"markDestinationCode\\\":\\\"Y13\\\",\\\"packageCode\\\":\\\"\\\",\\\"logisticsOrderNo\\\":\\\"IOT202603247844\\\",\\\"packageCodeName\\\":\\\"Y13\\\",\\\"markDestinationName\\\":\\\"Y13\\\",\\\"waybillNo\\\":\\\"8435404113413\\\"}\",\"retDate\":\"2026-03-24 11:52:29\",\"success\":true}"
+      },
+      "label_payload": null,
+      "label_response": null,
+      "print_payload": {
+        "labelFile": "/uploads/ems-labels/IOT202603247844-8435404113413.pdf",
+        "printerName": "HPRT N31BT",
+        "mode": "auto"
+      },
+      "print_response": {
+        "mode": "open",
+        "dispatched": false,
+        "message": "未能直接静默打印，已打开面单文件，请手动打印。",
+        "labelFile": "/uploads/ems-labels/IOT202603247844-8435404113413.pdf",
+        "fallbackReason": "sumatra:未检测到 SumatraPDF，可在后台物流设置里填写 SumatraPDF.exe 路径。 | powershell:Start-Process : ���ڳ������´����޷����д�����: û��Ӧ�ó�����˲�����ָ���ļ��й�������\r\n����λ�� ��:1 �ַ�: 1\r\n+ Start-Process -FilePath 'C:\\Users\\25647\\Desktop\\iot-mall\\uploads\\ems- ...\r\n+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : InvalidOperation: (:) [Start-Process]��InvalidOperationException\r\n    + FullyQualifiedErrorId : InvalidOperationException,Microsoft.PowerShell.Commands.StartProcessCommand"
+      },
+      "track_payload": {
+        "waybillNo": "8435404113413",
+        "direction": "0"
+      },
+      "track_response": {
+        "serialNo": "2245c312-1d50-49ed-92b4-0d7e9ac8c03a",
+        "retCode": "00000",
+        "retMsg": "当前邮件无客户信息！",
+        "retBody": {
+          "responseItems": []
+        },
+        "retDate": "2026-03-25 05:19:17",
+        "success": true,
+        "rawText": "{\"serialNo\":\"2245c312-1d50-49ed-92b4-0d7e9ac8c03a\",\"retCode\":\"00000\",\"retMsg\":\"当前邮件无客户信息！\",\"retBody\":\"{\\\"responseItems\\\":[]}\",\"retDate\":\"2026-03-25 05:19:17\",\"success\":true}"
+      },
+      "parse_payload": null,
+      "parse_response": null,
+      "validate_payload": null,
+      "validate_response": null
+    },
+    "created_at": "2026-03-24T03:05:43.737Z",
+    "reviewed_at": "2026-03-24T05:25:16.672Z",
+    "shipped_at": "2026-03-24T05:25:16.672Z",
+    "completed_at": null,
+    "cancelled_at": null
+  },
+  {
+    "id": 1774332022844,
+    "order_no": "IOT202603247315",
+    "user_id": 17724888898,
+    "flow_type": "ship_device",
+    "status": "shipped",
+    "plan_id": 2001,
+    "device_id": null,
+    "quantity": 1,
+    "plan_snapshot": {
+      "name": "移动 5G 全国套餐图",
+      "monthly_data": "以套餐图为准",
+      "monthly_price": 0,
+      "setup_price": 39,
+      "carrier": "中国移动",
+      "network_type": "5G"
+    },
+    "device_snapshot": null,
+    "pricing": {
+      "plan_amount": 39,
+      "device_amount": 0,
+      "service_amount": 49,
+      "total_amount": 88
+    },
+    "payment_method": "wechat",
+    "payment_proof": "/uploads/payment_1774332022840_62067f31cfb759ca.jpg",
+    "customer_name": "寄配测试",
+    "customer_phone": "17724888898",
+    "shipping_address": "河南省新乡市原阳县福宁集镇",
+    "remark": "寄配测试",
+    "device_submission": {
+      "brand": "中兴",
+      "model": "F50",
+      "can_insert_card": "yes",
+      "remove_control": "yes",
+      "condition": "",
+      "notes": "",
+      "outbound_tracking": "435095517216137"
+    },
+    "admin_note": "",
+    "internal_tags": [],
+    "processing_logs": [
+      {
+        "time": "2026-03-24T06:00:22.844Z",
+        "operator_id": 17724888898,
+        "operator_role": "user",
+        "action": "用户提交订单",
+        "content": "移动 5G 全国套餐图 / 寄设备配卡 / 中兴 F50，已上传付款截图，等待人工审核"
+      },
+      {
+        "time": "2026-03-24T06:01:55.824Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "EMS地址解析",
+        "content": "已解析为 河南省新乡市原阳县"
+      },
+      {
+        "time": "2026-03-24T06:02:00.106Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "EMS可达校验",
+        "content": "该地址信息可达！"
+      },
+      {
+        "time": "2026-03-24T06:02:05.762Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "EMS建单成功",
+        "content": "已获取 EMS 运单号 8435477181913"
+      },
+      {
+        "time": "2026-03-24T06:02:08.818Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "获取EMS面单",
+        "content": "已生成面单文件 /uploads/ems-labels/IOT202603247315-8435477181913.pdf"
+      },
+      {
+        "time": "2026-03-24T06:02:11.889Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "打印EMS面单",
+        "content": "未能直接静默打印，已打开面单文件，请手动打印。"
+      },
+      {
+        "time": "2026-03-24T06:02:22.647Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "同步EMS轨迹",
+        "content": "当前暂无 EMS 轨迹"
+      },
+      {
+        "time": "2026-03-24T06:02:31.098Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "状态更",
+        "content": "订单状态由 pending_payment_review 更新为 shipped"
+      },
+      {
+        "time": "2026-03-24T07:06:12.523Z",
+        "operator_id": 17724888898,
+        "operator_role": "admin",
+        "action": "EMS可达校验",
+        "content": "该地址信息可达！"
+      },
+      {
+        "time": "2026-03-24T21:19:18.898Z",
+        "operator_id": 0,
+        "operator_role": "system-auto",
+        "action": "同步EMS轨迹",
+        "content": "当前暂无 EMS 轨迹"
+      }
+    ],
+    "logistics_company": "EMS",
+    "merchant_tracking_number": "8435477181913",
+    "ems": {
+      "address_parse_source": "河南省新乡市原阳县福宁集镇",
+      "address_parse_candidates": [
+        {
+          "whole_address": "",
+          "prov": "河南省",
+          "city": "新乡市",
+          "county": "原阳县",
+          "address": "",
+          "pro_code": "410000",
+          "city_code": "410700",
+          "county_code": "410725",
+          "district_code": "410725"
+        }
+      ],
+      "receiver": {
+        "name": "寄配测试",
+        "mobile": "17724888898",
+        "phone": "",
+        "post_code": "",
+        "prov": "河南省",
+        "city": "新乡市",
+        "county": "原阳县",
+        "address": "福宁集镇"
+      },
+      "sender": {
+        "name": "一起山顶见",
+        "mobile": "17724888898",
+        "phone": "",
+        "post_code": "",
+        "prov": "河南省",
+        "city": "新乡市",
+        "county": "原阳县",
+        "address": "福宁集镇张大夫寨村"
+      },
+      "ecommerce_user_id": "IOT202603247315-1774332022844",
+      "logistics_order_no": "IOT202603247315",
+      "waybill_no": "8435477181913",
+      "route_code": "16Z-16Z-Y13-020",
+      "package_code": "",
+      "package_code_name": "Y13",
+      "mark_destination_code": "Y13",
+      "mark_destination_name": "Y13",
+      "biz_product_no": "10",
+      "biz_product_id": "",
+      "contents_attribute": "3",
+      "package_weight": "500",
+      "label_type": "129",
+      "label_url": "http://211.156.195.16/oss-jd-prd-psc-no-post/orderInfo%2FPDFpicture%2F20260324%2F1100217822419%2FIOT202603247315-2026-03-24+14%3A02%3A05.000%2Fc748de52-439a-47ae-955f-c83413c2341d.pdf",
+      "label_file": "/uploads/ems-labels/IOT202603247315-8435477181913.pdf",
+      "label_generated_at": "2026-03-24T06:02:08.818Z",
+      "address_parsed_at": "2026-03-24T06:01:55.823Z",
+      "waybill_created_at": "2026-03-24T06:02:05.762Z",
+      "label_requested_at": "2026-03-24T06:02:08.818Z",
+      "print_status": "open",
+      "print_mode": "open",
+      "print_message": "未能直接静默打印，已打开面单文件，请手动打印。",
+      "print_attempted_at": "2026-03-24T06:02:11.889Z",
+      "printed_at": null,
+      "last_serial_no": "b014e918-1d3b-4880-a3d3-4510fab10ccf",
+      "last_error": "",
+      "last_action": "track-sync",
+      "last_action_at": "2026-03-24T21:19:18.898Z",
+      "reachable": true,
+      "reachable_message": "该地址信息可达！",
+      "reachable_checked_at": "2026-03-24T07:06:12.523Z",
+      "tracking_direction": "0",
+      "track_summary": "",
+      "track_items": [],
+      "last_track_sync_at": "2026-03-24T21:19:18.898Z",
+      "api_logs": [
+        {
+          "action": "parse-address",
+          "status": "success",
+          "time": "2026-03-24T06:01:55.824Z",
+          "ret_code": "",
+          "ret_msg": "地址解析成功",
+          "serial_no": "",
+          "request": {
+            "wholeAddress": "河南省新乡市原阳县福宁集镇"
+          },
+          "response": {
+            "candidates": [
+              {
+                "wholeAddress": "",
+                "prov": "河南省",
+                "city": "新乡市",
+                "county": "原阳县",
+                "address": "",
+                "proCode": "410000",
+                "cityCode": "410700",
+                "countyCode": "410725",
+                "districtCode": "410725"
+              }
+            ]
+          }
+        },
+        {
+          "action": "validate",
+          "status": "success",
+          "time": "2026-03-24T06:02:00.106Z",
+          "ret_code": "00000",
+          "ret_msg": "该地址信息可达！",
+          "serial_no": "ff8c141c-3dff-4cb1-b863-9414d0f6cc78",
+          "request": {
+            "baseProductNo": "10",
+            "bizProductId": "",
+            "contentsAttribute": "3",
+            "receiverProv": "河南省",
+            "receiverCity": "新乡市",
+            "receiverCounty": "原阳县",
+            "receiverAddress": "福宁集镇",
+            "senderProv": "河南省",
+            "senderCity": "新乡市",
+            "senderCounty": "原阳县",
+            "senderAddress": "福宁集镇张大夫寨村",
+            "weight": "500"
+          },
+          "response": {
+            "serialNo": "ff8c141c-3dff-4cb1-b863-9414d0f6cc78",
+            "retCode": "00000",
+            "retMsg": "该地址信息可达！",
+            "retBody": "",
+            "retDate": "2026-03-24 14:01:59",
+            "success": true,
+            "rawText": "{\"serialNo\":\"ff8c141c-3dff-4cb1-b863-9414d0f6cc78\",\"retCode\":\"00000\",\"retMsg\":\"该地址信息可达！\",\"retBody\":\"\",\"retDate\":\"2026-03-24 14:01:59\",\"success\":true}"
+          }
+        },
+        {
+          "action": "create",
+          "status": "success",
+          "time": "2026-03-24T06:02:05.762Z",
+          "ret_code": "00000",
+          "ret_msg": "成功！",
+          "serial_no": "1a394b38-d0ed-4ac0-ae2c-365b6c23322d",
+          "request": {
+            "ecommerceUserId": "IOT202603247315-1774332022844",
+            "logisticsOrderNo": "IOT202603247315",
+            "createdTime": "2026-03-24 14:02:05",
+            "senderNo": "1100217822419",
+            "contentsAttribute": "3",
+            "bizProductNo": "10",
+            "bizProductId": "",
+            "weight": 500,
+            "remarks": "订单:IOT202603247315；商品:移动 5G 全国套餐图 / 寄设备配卡 / 中兴 F50；备注:寄配测试",
+            "sender": {
+              "name": "一起山顶见",
+              "mobile": "17724888898",
+              "phone": "",
+              "postCode": "",
+              "prov": "河南省",
+              "city": "新乡市",
+              "county": "原阳县",
+              "address": "福宁集镇张大夫寨村"
+            },
+            "receiver": {
+              "name": "寄配测试",
+              "mobile": "17724888898",
+              "phone": "",
+              "postCode": "",
+              "prov": "河南省",
+              "city": "新乡市",
+              "county": "原阳县",
+              "address": "福宁集镇"
+            },
+            "cargos": [
+              {
+                "cargoName": "中兴 F50",
+                "cargoCategory": "移动 5G 全国套餐图",
+                "cargoQuantity": 1,
+                "cargoValue": 88,
+                "cargoWeight": 500
+              }
+            ]
+          },
+          "response": {
+            "serialNo": "1a394b38-d0ed-4ac0-ae2c-365b6c23322d",
+            "retCode": "00000",
+            "retMsg": "成功！",
+            "retBody": {
+              "routeCode": "16Z-16Z-Y13-020",
+              "markDestinationCode": "Y13",
+              "packageCode": "",
+              "logisticsOrderNo": "IOT202603247315",
+              "packageCodeName": "Y13",
+              "markDestinationName": "Y13",
+              "waybillNo": "8435477181913"
+            },
+            "retDate": "2026-03-24 14:02:04",
+            "success": true,
+            "rawText": "{\"serialNo\":\"1a394b38-d0ed-4ac0-ae2c-365b6c23322d\",\"retCode\":\"00000\",\"retMsg\":\"成功！\",\"retBody\":\"{\\\"routeCode\\\":\\\"16Z-16Z-Y13-020\\\",\\\"markDestinationCode\\\":\\\"Y13\\\",\\\"packageCode\\\":\\\"\\\",\\\"logisticsOrderNo\\\":\\\"IOT202603247315\\\",\\\"packageCodeName\\\":\\\"Y13\\\",\\\"markDestinationName\\\":\\\"Y13\\\",\\\"waybillNo\\\":\\\"8435477181913\\\"}\",\"retDate\":\"2026-03-24 14:02:04\",\"success\":true}"
+          }
+        },
+        {
+          "action": "label",
+          "status": "success",
+          "time": "2026-03-24T06:02:08.818Z",
+          "ret_code": "00000",
+          "ret_msg": "成功，面单URL有效期为1个月",
+          "serial_no": "dcd9eb3f-b0ea-4371-8ff2-17bfcee25bfd",
+          "request": {
+            "orderNo": "IOT202603247315",
+            "waybillNo": "8435477181913",
+            "type": "129"
+          },
+          "response": {
+            "serialNo": "dcd9eb3f-b0ea-4371-8ff2-17bfcee25bfd",
+            "retCode": "00000",
+            "retMsg": "成功，面单URL有效期为1个月",
+            "retBody": "http://211.156.195.16/oss-jd-prd-psc-no-post/orderInfo%2FPDFpicture%2F20260324%2F1100217822419%2FIOT202603247315-2026-03-24+14%3A02%3A05.000%2Fc748de52-439a-47ae-955f-c83413c2341d.pdf",
+            "retDate": "2026-03-24 14:02:07",
+            "success": true,
+            "rawText": "{\"serialNo\":\"dcd9eb3f-b0ea-4371-8ff2-17bfcee25bfd\",\"retCode\":\"00000\",\"retMsg\":\"成功，面单URL有效期为1个月\",\"retBody\":\"http://211.156.195.16/oss-jd-prd-psc-no-post/orderInfo%2FPDFpicture%2F20260324%2F1100217822419%2FIOT202603247315-2026-03-24+14%3A02%3A05.000%2Fc748de52-439a-47ae-955f-c83413c2341d.pdf\",\"retDate\":\"2026-03-24 14:02:07\",\"success\":true}"
+          }
+        },
+        {
+          "action": "print",
+          "status": "success",
+          "time": "2026-03-24T06:02:11.889Z",
+          "ret_code": "",
+          "ret_msg": "未能直接静默打印，已打开面单文件，请手动打印。",
+          "serial_no": "",
+          "request": {
+            "labelFile": "/uploads/ems-labels/IOT202603247315-8435477181913.pdf",
+            "printerName": "HPRT N31BT",
+            "mode": "auto"
+          },
+          "response": {
+            "mode": "open",
+            "dispatched": false,
+            "message": "未能直接静默打印，已打开面单文件，请手动打印。",
+            "labelFile": "/uploads/ems-labels/IOT202603247315-8435477181913.pdf",
+            "fallbackReason": "sumatra:未检测到 SumatraPDF，可在后台物流设置里填写 SumatraPDF.exe 路径。 | powershell:Start-Process : 由于出现以下错误，无法运行此命令: No application is associated with the specified file for this operation。\r\n所在位置 行:1 字符: 129\r\n+ ... ew($false); Start-Process -FilePath 'C:\\Users\\25647\\Desktop\\iot-mall\\ ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : InvalidOperation: (:) [Start-Process]，InvalidOperationException\r\n    + FullyQualifiedErrorId : InvalidOperationException,Microsoft.PowerShell.Commands.StartProcessCommand"
+          }
+        },
+        {
+          "action": "track-sync",
+          "status": "success",
+          "time": "2026-03-24T06:02:22.647Z",
+          "ret_code": "00000",
+          "ret_msg": "当前邮件无客户信息！",
+          "serial_no": "a48b67cc-2a11-4846-91ac-fea86f8ac03c",
+          "request": {
+            "waybillNo": "8435477181913",
+            "direction": "0"
+          },
+          "response": {
+            "serialNo": "a48b67cc-2a11-4846-91ac-fea86f8ac03c",
+            "retCode": "00000",
+            "retMsg": "当前邮件无客户信息！",
+            "retBody": {
+              "responseItems": []
+            },
+            "retDate": "2026-03-24 14:02:21",
+            "success": true,
+            "rawText": "{\"serialNo\":\"a48b67cc-2a11-4846-91ac-fea86f8ac03c\",\"retCode\":\"00000\",\"retMsg\":\"当前邮件无客户信息！\",\"retBody\":\"{\\\"responseItems\\\":[]}\",\"retDate\":\"2026-03-24 14:02:21\",\"success\":true}"
+          }
+        },
+        {
+          "action": "validate",
+          "status": "success",
+          "time": "2026-03-24T07:06:12.523Z",
+          "ret_code": "00000",
+          "ret_msg": "该地址信息可达！",
+          "serial_no": "10708441-d098-477b-aa8e-3eb067ba399e",
+          "request": {
+            "baseProductNo": "10",
+            "bizProductId": "",
+            "contentsAttribute": "3",
+            "receiverProv": "河南省",
+            "receiverCity": "新乡市",
+            "receiverCounty": "原阳县",
+            "receiverAddress": "福宁集镇",
+            "senderProv": "河南省",
+            "senderCity": "新乡市",
+            "senderCounty": "原阳县",
+            "senderAddress": "福宁集镇张大夫寨村",
+            "weight": "500"
+          },
+          "response": {
+            "serialNo": "10708441-d098-477b-aa8e-3eb067ba399e",
+            "retCode": "00000",
+            "retMsg": "该地址信息可达！",
+            "retBody": "",
+            "retDate": "2026-03-24 15:06:11",
+            "success": true,
+            "rawText": "{\"serialNo\":\"10708441-d098-477b-aa8e-3eb067ba399e\",\"retCode\":\"00000\",\"retMsg\":\"该地址信息可达！\",\"retBody\":\"\",\"retDate\":\"2026-03-24 15:06:11\",\"success\":true}"
+          }
+        },
+        {
+          "action": "print-preflight",
+          "status": "error",
+          "time": "2026-03-24T07:06:14.233Z",
+          "ret_code": "PRINT_PREFLIGHT",
+          "ret_msg": "未读取到打印机纸张配置，请先在打印机驱动中确认纸张尺寸。；未读取到打印机纸张配置，请先完成打印机纸张自检。",
+          "serial_no": "",
+          "request": {
+            "labelFile": "/uploads/ems-labels/IOT202603247315-8435477181913.pdf",
+            "printerName": "HPRT N31BT",
+            "mode": "auto"
+          },
+          "response": {
+            "retCode": "PRINT_PREFLIGHT",
+            "retMsg": "未读取到打印机纸张配置，请先在打印机驱动中确认纸张尺寸。；未读取到打印机纸张配置，请先完成打印机纸张自检。",
+            "diagnostics": {
+              "platform": "win32",
+              "printMode": "auto",
+              "preferredPrinter": "HPRT N31BT",
+              "printers": [
+                {
+                  "name": "HPRT N31BT",
+                  "printerStatus": "0",
+                  "driverName": "HPRT N31BT",
+                  "portName": "USB001",
+                  "workOffline": false
+                },
+                {
+                  "name": "Microsoft Print to PDF",
+                  "printerStatus": "0",
+                  "driverName": "Microsoft Print To PDF",
+                  "portName": "PORTPROMPT:",
+                  "workOffline": false
+                },
+                {
+                  "name": "导出为WPS PDF",
+                  "printerStatus": "0",
+                  "driverName": "Kingsoft Virtual Printer Driver",
+                  "portName": "Kingsoft Virtual Printer Port",
+                  "workOffline": false
+                }
+              ],
+              "matchedPrinter": {
+                "name": "HPRT N31BT",
+                "printerStatus": "0",
+                "driverName": "HPRT N31BT",
+                "portName": "USB001",
+                "workOffline": false
+              },
+              "printerConfiguration": {
+                "paperSize": "",
+                "color": "false",
+                "duplexingMode": "0"
+              },
+              "sumatra": {
+                "available": false,
+                "path": ""
+              },
+              "cloudPrint": {
+                "reachable": true,
+                "url": "http://127.0.0.1:8000/CLodopfuncs.js?health=1",
+                "status": 200
+              },
+              "paper": {
+                "name": "100x180mm",
+                "widthMm": "100",
+                "heightMm": "180",
+                "actualName": "",
+                "actualWidthMm": "",
+                "actualHeightMm": "",
+                "match": null,
+                "reason": "未读取到打印机纸张配置",
+                "expectedDisplay": "100x180mm",
+                "actualDisplay": ""
+              },
+              "warnings": [
+                "未检测到 SumatraPDF，自动静默打印会退回到其他方式。",
+                "已找到打印机，但未读取到纸张配置，请确认驱动中纸张大小是否正确。",
+                "未读取到打印机纸张配置，建议先运行打印自检。"
+              ],
+              "preflight": {
+                "ok": false,
+                "mode": "auto",
+                "requiresPrinter": true,
+                "printerOnline": true,
+                "blockingReasons": [
+                  "未读取到打印机纸张配置，请先在打印机驱动中确认纸张尺寸。",
+                  "未读取到打印机纸张配置，请先完成打印机纸张自检。"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "action": "track-sync",
+          "status": "success",
+          "time": "2026-03-24T21:19:18.898Z",
+          "ret_code": "00000",
+          "ret_msg": "当前邮件无客户信息！",
+          "serial_no": "b014e918-1d3b-4880-a3d3-4510fab10ccf",
+          "request": {
+            "waybillNo": "8435477181913",
+            "direction": "0"
+          },
+          "response": {
+            "serialNo": "b014e918-1d3b-4880-a3d3-4510fab10ccf",
+            "retCode": "00000",
+            "retMsg": "当前邮件无客户信息！",
+            "retBody": {
+              "responseItems": []
+            },
+            "retDate": "2026-03-25 05:19:17",
+            "success": true,
+            "rawText": "{\"serialNo\":\"b014e918-1d3b-4880-a3d3-4510fab10ccf\",\"retCode\":\"00000\",\"retMsg\":\"当前邮件无客户信息！\",\"retBody\":\"{\\\"responseItems\\\":[]}\",\"retDate\":\"2026-03-25 05:19:17\",\"success\":true}"
+          }
+        }
+      ],
+      "workflow_task": {
+        "id": "",
+        "mode": "single",
+        "status": "idle",
+        "current_step": "",
+        "error": "",
+        "include_track": true,
+        "initiator_id": 0,
+        "initiator_role": "",
+        "enqueued_at": null,
+        "started_at": null,
+        "finished_at": null,
+        "updated_at": null,
+        "steps": {
+          "parse": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "validate": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "create": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "label": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "print": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          },
+          "track": {
+            "status": "idle",
+            "message": "",
+            "updated_at": null
+          }
+        }
+      },
+      "order_payload": {
+        "ecommerceUserId": "IOT202603247315-1774332022844",
+        "logisticsOrderNo": "IOT202603247315",
+        "createdTime": "2026-03-24 14:02:05",
+        "senderNo": "1100217822419",
+        "contentsAttribute": "3",
+        "bizProductNo": "10",
+        "bizProductId": "",
+        "weight": 500,
+        "remarks": "订单:IOT202603247315；商品:移动 5G 全国套餐图 / 寄设备配卡 / 中兴 F50；备注:寄配测试",
+        "sender": {
+          "name": "一起山顶见",
+          "mobile": "17724888898",
+          "phone": "",
+          "postCode": "",
+          "prov": "河南省",
+          "city": "新乡市",
+          "county": "原阳县",
+          "address": "福宁集镇张大夫寨村"
+        },
+        "receiver": {
+          "name": "寄配测试",
+          "mobile": "17724888898",
+          "phone": "",
+          "postCode": "",
+          "prov": "河南省",
+          "city": "新乡市",
+          "county": "原阳县",
+          "address": "福宁集镇"
+        },
+        "cargos": [
+          {
+            "cargoName": "中兴 F50",
+            "cargoCategory": "移动 5G 全国套餐图",
+            "cargoQuantity": 1,
+            "cargoValue": 88,
+            "cargoWeight": 500
+          }
+        ]
+      },
+      "order_response": {
+        "serialNo": "1a394b38-d0ed-4ac0-ae2c-365b6c23322d",
+        "retCode": "00000",
+        "retMsg": "成功！",
+        "retBody": {
+          "routeCode": "16Z-16Z-Y13-020",
+          "markDestinationCode": "Y13",
+          "packageCode": "",
+          "logisticsOrderNo": "IOT202603247315",
+          "packageCodeName": "Y13",
+          "markDestinationName": "Y13",
+          "waybillNo": "8435477181913"
+        },
+        "retDate": "2026-03-24 14:02:04",
+        "success": true,
+        "rawText": "{\"serialNo\":\"1a394b38-d0ed-4ac0-ae2c-365b6c23322d\",\"retCode\":\"00000\",\"retMsg\":\"成功！\",\"retBody\":\"{\\\"routeCode\\\":\\\"16Z-16Z-Y13-020\\\",\\\"markDestinationCode\\\":\\\"Y13\\\",\\\"packageCode\\\":\\\"\\\",\\\"logisticsOrderNo\\\":\\\"IOT202603247315\\\",\\\"packageCodeName\\\":\\\"Y13\\\",\\\"markDestinationName\\\":\\\"Y13\\\",\\\"waybillNo\\\":\\\"8435477181913\\\"}\",\"retDate\":\"2026-03-24 14:02:04\",\"success\":true}"
+      },
+      "label_payload": {
+        "orderNo": "IOT202603247315",
+        "waybillNo": "8435477181913",
+        "type": "129"
+      },
+      "label_response": {
+        "serialNo": "dcd9eb3f-b0ea-4371-8ff2-17bfcee25bfd",
+        "retCode": "00000",
+        "retMsg": "成功，面单URL有效期为1个月",
+        "retBody": "http://211.156.195.16/oss-jd-prd-psc-no-post/orderInfo%2FPDFpicture%2F20260324%2F1100217822419%2FIOT202603247315-2026-03-24+14%3A02%3A05.000%2Fc748de52-439a-47ae-955f-c83413c2341d.pdf",
+        "retDate": "2026-03-24 14:02:07",
+        "success": true,
+        "rawText": "{\"serialNo\":\"dcd9eb3f-b0ea-4371-8ff2-17bfcee25bfd\",\"retCode\":\"00000\",\"retMsg\":\"成功，面单URL有效期为1个月\",\"retBody\":\"http://211.156.195.16/oss-jd-prd-psc-no-post/orderInfo%2FPDFpicture%2F20260324%2F1100217822419%2FIOT202603247315-2026-03-24+14%3A02%3A05.000%2Fc748de52-439a-47ae-955f-c83413c2341d.pdf\",\"retDate\":\"2026-03-24 14:02:07\",\"success\":true}"
+      },
+      "print_payload": {
+        "labelFile": "/uploads/ems-labels/IOT202603247315-8435477181913.pdf",
+        "printerName": "HPRT N31BT",
+        "mode": "auto"
+      },
+      "print_response": {
+        "mode": "open",
+        "dispatched": false,
+        "message": "未能直接静默打印，已打开面单文件，请手动打印。",
+        "labelFile": "/uploads/ems-labels/IOT202603247315-8435477181913.pdf",
+        "fallbackReason": "sumatra:未检测到 SumatraPDF，可在后台物流设置里填写 SumatraPDF.exe 路径。 | powershell:Start-Process : 由于出现以下错误，无法运行此命令: No application is associated with the specified file for this operation。\r\n所在位置 行:1 字符: 129\r\n+ ... ew($false); Start-Process -FilePath 'C:\\Users\\25647\\Desktop\\iot-mall\\ ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : InvalidOperation: (:) [Start-Process]，InvalidOperationException\r\n    + FullyQualifiedErrorId : InvalidOperationException,Microsoft.PowerShell.Commands.StartProcessCommand"
+      },
+      "track_payload": {
+        "waybillNo": "8435477181913",
+        "direction": "0"
+      },
+      "track_response": {
+        "serialNo": "b014e918-1d3b-4880-a3d3-4510fab10ccf",
+        "retCode": "00000",
+        "retMsg": "当前邮件无客户信息！",
+        "retBody": {
+          "responseItems": []
+        },
+        "retDate": "2026-03-25 05:19:17",
+        "success": true,
+        "rawText": "{\"serialNo\":\"b014e918-1d3b-4880-a3d3-4510fab10ccf\",\"retCode\":\"00000\",\"retMsg\":\"当前邮件无客户信息！\",\"retBody\":\"{\\\"responseItems\\\":[]}\",\"retDate\":\"2026-03-25 05:19:17\",\"success\":true}"
+      },
+      "parse_payload": {
+        "wholeAddress": "河南省新乡市原阳县福宁集镇"
+      },
+      "parse_response": {
+        "candidates": [
+          {
+            "wholeAddress": "",
+            "prov": "河南省",
+            "city": "新乡市",
+            "county": "原阳县",
+            "address": "",
+            "proCode": "410000",
+            "cityCode": "410700",
+            "countyCode": "410725",
+            "districtCode": "410725"
+          }
+        ]
+      },
+      "validate_payload": {
+        "baseProductNo": "10",
+        "bizProductId": "",
+        "contentsAttribute": "3",
+        "receiverProv": "河南省",
+        "receiverCity": "新乡市",
+        "receiverCounty": "原阳县",
+        "receiverAddress": "福宁集镇",
+        "senderProv": "河南省",
+        "senderCity": "新乡市",
+        "senderCounty": "原阳县",
+        "senderAddress": "福宁集镇张大夫寨村",
+        "weight": "500"
+      },
+      "validate_response": {
+        "serialNo": "10708441-d098-477b-aa8e-3eb067ba399e",
+        "retCode": "00000",
+        "retMsg": "该地址信息可达！",
+        "retBody": "",
+        "retDate": "2026-03-24 15:06:11",
+        "success": true,
+        "rawText": "{\"serialNo\":\"10708441-d098-477b-aa8e-3eb067ba399e\",\"retCode\":\"00000\",\"retMsg\":\"该地址信息可达！\",\"retBody\":\"\",\"retDate\":\"2026-03-24 15:06:11\",\"success\":true}"
+      }
+    },
+    "created_at": "2026-03-24T06:00:22.844Z",
+    "reviewed_at": "2026-03-24T06:02:31.098Z",
+    "shipped_at": "2026-03-24T06:02:31.098Z",
     "completed_at": null,
     "cancelled_at": null
   }

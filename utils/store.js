@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
+const { createTemporaryPassword, normalizeStoredPassword } = require('./auth');
+const { normalizeUserNoticeCenter } = require('./user-notices');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const DATA_DIR = path.join(ROOT_DIR, 'data');
@@ -11,15 +13,23 @@ const DEVICES_FILE = path.join(DATA_DIR, 'devices.json');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 
-const MYSQL_HOST = process.env.MYSQL_HOST || '149.88.95.34';
+const MYSQL_HOST = safeText(process.env.MYSQL_HOST);
 const MYSQL_PORT = Number(process.env.MYSQL_PORT) || 3306;
-const MYSQL_DATABASE = process.env.MYSQL_DATABASE || 'iotmall';
-const MYSQL_USER = process.env.MYSQL_USER || 'iotmall';
-const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD || 'MPDENDB2A4J86TrK';
+const MYSQL_DATABASE = safeText(process.env.MYSQL_DATABASE);
+const MYSQL_USER = safeText(process.env.MYSQL_USER);
+const MYSQL_PASSWORD = safeText(process.env.MYSQL_PASSWORD);
 
 const ADMIN_PHONE = process.env.ADMIN_PHONE || '17724888898';
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123456';
+const ADMIN_PASSWORD = safeText(process.env.ADMIN_PASSWORD);
+
+const SUPPORTED_STORAGE_DRIVERS = ['json', 'mysql'];
+const MYSQL_CONFIGURED = Boolean(MYSQL_HOST && MYSQL_DATABASE && MYSQL_USER && MYSQL_PASSWORD);
+const STORAGE_DRIVER = SUPPORTED_STORAGE_DRIVERS.includes(process.env.STORAGE_DRIVER)
+    ? process.env.STORAGE_DRIVER
+    : MYSQL_CONFIGURED
+      ? 'mysql'
+      : 'json';
 
 const FLOW_TYPES = ['buy_device', 'ship_device'];
 const ORDER_STATUSES = [
@@ -113,13 +123,63 @@ function makeOrderNo() {
     return `IOT${datePart}${randomPart}`;
 }
 
-const DEFAULT_ADMIN = {
-    id: Number(ADMIN_PHONE),
-    phone: ADMIN_PHONE,
-    username: ADMIN_USERNAME,
-    password: ADMIN_PASSWORD,
-    nickname: '管理员',
-    role: 'admin',
+let hasLoggedGeneratedAdminPassword = false;
+
+function buildAdminPassword(existingPassword = '') {
+    if (ADMIN_PASSWORD) {
+        return normalizeStoredPassword(ADMIN_PASSWORD);
+    }
+
+    const normalizedExistingPassword = normalizeStoredPassword(existingPassword);
+    if (normalizedExistingPassword) {
+        return normalizedExistingPassword;
+    }
+
+    const temporaryPassword = createTemporaryPassword();
+    if (!hasLoggedGeneratedAdminPassword) {
+        hasLoggedGeneratedAdminPassword = true;
+        console.warn(`[store] ADMIN_PASSWORD 未设置，已为初始管理员生成一次性密码: ${temporaryPassword}`);
+    }
+    return normalizeStoredPassword(temporaryPassword);
+}
+
+function buildDefaultAdmin(existingAdmin = {}) {
+    return normalizeUser({
+        ...existingAdmin,
+        id: toInteger(existingAdmin.id, Number(ADMIN_PHONE) || Date.now()),
+        phone: ADMIN_PHONE,
+        username: ADMIN_USERNAME,
+        password: buildAdminPassword(existingAdmin.password),
+        nickname: existingAdmin.nickname || 'Admin',
+        role: 'admin',
+    });
+}
+
+const DEFAULT_LOGISTICS_SETTINGS = {
+    sender_no: process.env.EMS_SENDER_NO || '',
+    authorization: process.env.EMS_AUTHORIZATION || '',
+    sign_key: process.env.EMS_SIGN_KEY || process.env.EMS_SIGN_KEY_BASE64 || '',
+    sender_name: '',
+    sender_phone: '',
+    sender_post_code: '',
+    sender_prov: '',
+    sender_city: '',
+    sender_county: '',
+    sender_address: '',
+    biz_product_no: process.env.EMS_BIZ_PRODUCT_NO || '10',
+    biz_product_id: process.env.EMS_BIZ_PRODUCT_ID || '',
+    contents_attribute: process.env.EMS_CONTENTS_ATTRIBUTE || '3',
+    default_weight_grams: process.env.EMS_DEFAULT_WEIGHT_GRAMS || '500',
+    label_type: process.env.EMS_LABEL_TYPE || '129',
+    preferred_print_mode: process.platform === 'win32' ? 'auto' : 'browser',
+    preferred_printer: process.env.EMS_PRINTER_NAME || '',
+    sumatra_path: process.env.EMS_SUMATRA_PATH || '',
+    paper_name: '100x180mm',
+    paper_width_mm: '100',
+    paper_height_mm: '180',
+    auto_sync_tracks: true,
+    track_auto_sync_interval_hours: 4,
+    track_stale_hours: 24,
 };
 
 const DEFAULT_SETTINGS = loadTemplateJson(SETTINGS_FILE, {
@@ -165,6 +225,7 @@ const DEFAULT_SETTINGS = loadTemplateJson(SETTINGS_FILE, {
     share_title: '物联卡设备配卡商城',
     share_description: '先看套餐资费图，再选择购买设备配卡或寄设备配卡，付款后上传截图等待人工审核。',
     payment_qrs: { wechat: null, alipay: null },
+    logistics: DEFAULT_LOGISTICS_SETTINGS,
 });
 
 const DEFAULT_PLANS = loadTemplateJson(PLANS_FILE, [
@@ -318,17 +379,291 @@ function normalizeSettings(rawSettings = {}) {
             wechat: rawSettings.payment_qrs?.wechat ? safeText(rawSettings.payment_qrs.wechat) : null,
             alipay: rawSettings.payment_qrs?.alipay ? safeText(rawSettings.payment_qrs.alipay) : null,
         },
+        logistics: normalizeLogisticsSettings(rawSettings.logistics),
     };
 }
 
 function normalizeUser(rawUser = {}) {
+    const role = rawUser.role === 'admin' ? 'admin' : 'user';
     return {
         id: toInteger(rawUser.id, Date.now()),
         phone: safeText(rawUser.phone),
         username: safeText(rawUser.username),
-        password: safeText(rawUser.password),
+        password: normalizeStoredPassword(rawUser.password),
         nickname: safeText(rawUser.nickname || `用户${safeText(rawUser.phone).slice(-4)}`),
-        role: rawUser.role === 'admin' ? 'admin' : 'user',
+        role,
+    };
+}
+
+function normalizeEmsAddressCandidate(rawCandidate = {}) {
+    return {
+        whole_address: safeText(rawCandidate.whole_address ?? rawCandidate.wholeAddress),
+        prov: safeText(rawCandidate.prov ?? rawCandidate.provName),
+        city: safeText(rawCandidate.city ?? rawCandidate.cityName),
+        county: safeText(rawCandidate.county ?? rawCandidate.countyName),
+        address: safeText(rawCandidate.address),
+        pro_code: safeText(rawCandidate.pro_code ?? rawCandidate.proCode),
+        city_code: safeText(rawCandidate.city_code ?? rawCandidate.cityCode),
+        county_code: safeText(rawCandidate.county_code ?? rawCandidate.countyCode),
+        district_code: safeText(rawCandidate.district_code ?? rawCandidate.districtCode),
+    };
+}
+
+function normalizeEmsParty(rawParty = {}) {
+    return {
+        name: safeText(rawParty.name),
+        mobile: safeText(rawParty.mobile),
+        phone: safeText(rawParty.phone),
+        post_code: safeText(rawParty.post_code ?? rawParty.postCode),
+        prov: safeText(rawParty.prov),
+        city: safeText(rawParty.city),
+        county: safeText(rawParty.county),
+        address: safeText(rawParty.address),
+    };
+}
+
+function normalizeEmsTrackItem(rawTrack = {}) {
+    return {
+        waybill_no: safeText(rawTrack.waybill_no ?? rawTrack.waybillNo),
+        op_time: safeText(rawTrack.op_time ?? rawTrack.opTime),
+        op_code: safeText(rawTrack.op_code ?? rawTrack.opCode),
+        op_name: safeText(rawTrack.op_name ?? rawTrack.opName),
+        op_desc: safeText(rawTrack.op_desc ?? rawTrack.opDesc),
+        op_org_prov_name: safeText(rawTrack.op_org_prov_name ?? rawTrack.opOrgProvName),
+        op_org_city: safeText(rawTrack.op_org_city ?? rawTrack.opOrgCity),
+        op_org_code: safeText(rawTrack.op_org_code ?? rawTrack.opOrgCode),
+        op_org_name: safeText(rawTrack.op_org_name ?? rawTrack.opOrgName),
+        operator_no: safeText(rawTrack.operator_no ?? rawTrack.operatorNo),
+        operator_name: safeText(rawTrack.operator_name ?? rawTrack.operatorName),
+        deliver_code: safeText(rawTrack.deliver_code ?? rawTrack.deliverCode),
+        attempt_delivery_code: safeText(rawTrack.attempt_delivery_code ?? rawTrack.attemptDeliveryCode),
+        product_name: safeText(rawTrack.product_name ?? rawTrack.productName),
+    };
+}
+
+function normalizeLogisticsSettings(rawLogistics = {}) {
+    return {
+        sender_no: safeText(rawLogistics.sender_no ?? rawLogistics.senderNo, DEFAULT_LOGISTICS_SETTINGS.sender_no),
+        authorization: safeText(rawLogistics.authorization, DEFAULT_LOGISTICS_SETTINGS.authorization),
+        sign_key: safeText(rawLogistics.sign_key ?? rawLogistics.signKey, DEFAULT_LOGISTICS_SETTINGS.sign_key),
+        sender_name: safeText(rawLogistics.sender_name ?? rawLogistics.senderName, DEFAULT_LOGISTICS_SETTINGS.sender_name),
+        sender_phone: safeText(rawLogistics.sender_phone ?? rawLogistics.senderPhone, DEFAULT_LOGISTICS_SETTINGS.sender_phone),
+        sender_post_code: safeText(
+            rawLogistics.sender_post_code ?? rawLogistics.senderPostCode,
+            DEFAULT_LOGISTICS_SETTINGS.sender_post_code,
+        ),
+        sender_prov: safeText(rawLogistics.sender_prov ?? rawLogistics.senderProv, DEFAULT_LOGISTICS_SETTINGS.sender_prov),
+        sender_city: safeText(rawLogistics.sender_city ?? rawLogistics.senderCity, DEFAULT_LOGISTICS_SETTINGS.sender_city),
+        sender_county: safeText(rawLogistics.sender_county ?? rawLogistics.senderCounty, DEFAULT_LOGISTICS_SETTINGS.sender_county),
+        sender_address: safeText(
+            rawLogistics.sender_address ?? rawLogistics.senderAddress,
+            DEFAULT_LOGISTICS_SETTINGS.sender_address,
+        ),
+        biz_product_no: safeText(
+            rawLogistics.biz_product_no ?? rawLogistics.bizProductNo,
+            DEFAULT_LOGISTICS_SETTINGS.biz_product_no,
+        ),
+        biz_product_id: safeText(
+            rawLogistics.biz_product_id ?? rawLogistics.bizProductId,
+            DEFAULT_LOGISTICS_SETTINGS.biz_product_id,
+        ),
+        contents_attribute: safeText(
+            rawLogistics.contents_attribute ?? rawLogistics.contentsAttribute,
+            DEFAULT_LOGISTICS_SETTINGS.contents_attribute,
+        ),
+        default_weight_grams: safeText(
+            rawLogistics.default_weight_grams ?? rawLogistics.defaultWeightGrams,
+            DEFAULT_LOGISTICS_SETTINGS.default_weight_grams,
+        ),
+        label_type: safeText(rawLogistics.label_type ?? rawLogistics.labelType, DEFAULT_LOGISTICS_SETTINGS.label_type),
+        preferred_print_mode: safeText(
+            rawLogistics.preferred_print_mode ?? rawLogistics.preferredPrintMode,
+            DEFAULT_LOGISTICS_SETTINGS.preferred_print_mode,
+        ).toLowerCase(),
+        preferred_printer: safeText(
+            rawLogistics.preferred_printer ?? rawLogistics.preferredPrinter,
+            DEFAULT_LOGISTICS_SETTINGS.preferred_printer,
+        ),
+        sumatra_path: safeText(rawLogistics.sumatra_path ?? rawLogistics.sumatraPath, DEFAULT_LOGISTICS_SETTINGS.sumatra_path),
+        paper_name: safeText(rawLogistics.paper_name ?? rawLogistics.paperName, DEFAULT_LOGISTICS_SETTINGS.paper_name),
+        paper_width_mm: safeText(
+            rawLogistics.paper_width_mm ?? rawLogistics.paperWidthMm,
+            DEFAULT_LOGISTICS_SETTINGS.paper_width_mm,
+        ),
+        paper_height_mm: safeText(
+            rawLogistics.paper_height_mm ?? rawLogistics.paperHeightMm,
+            DEFAULT_LOGISTICS_SETTINGS.paper_height_mm,
+        ),
+        auto_sync_tracks: toBoolean(
+            rawLogistics.auto_sync_tracks ?? rawLogistics.autoSyncTracks,
+            DEFAULT_LOGISTICS_SETTINGS.auto_sync_tracks,
+        ),
+        track_auto_sync_interval_hours: Math.max(
+            1,
+            toInteger(
+                rawLogistics.track_auto_sync_interval_hours ?? rawLogistics.trackAutoSyncIntervalHours,
+                DEFAULT_LOGISTICS_SETTINGS.track_auto_sync_interval_hours,
+            ),
+        ),
+        track_stale_hours: Math.max(
+            1,
+            toInteger(rawLogistics.track_stale_hours ?? rawLogistics.trackStaleHours, DEFAULT_LOGISTICS_SETTINGS.track_stale_hours),
+        ),
+    };
+}
+
+function normalizeEmsApiLog(rawLog = {}) {
+    return {
+        action: safeText(rawLog.action),
+        status: safeText(rawLog.status, 'success'),
+        time: rawLog.time || new Date().toISOString(),
+        ret_code: safeText(rawLog.ret_code ?? rawLog.retCode),
+        ret_msg: safeText(rawLog.ret_msg ?? rawLog.retMsg),
+        serial_no: safeText(rawLog.serial_no ?? rawLog.serialNo),
+        request: rawLog.request && typeof rawLog.request === 'object' ? rawLog.request : null,
+        response: rawLog.response && typeof rawLog.response === 'object' ? rawLog.response : null,
+    };
+}
+
+function buildDefaultEmsWorkflowTaskSteps() {
+    return {
+        parse: { status: 'idle', message: '', updated_at: null },
+        validate: { status: 'idle', message: '', updated_at: null },
+        create: { status: 'idle', message: '', updated_at: null },
+        label: { status: 'idle', message: '', updated_at: null },
+        print: { status: 'idle', message: '', updated_at: null },
+        track: { status: 'idle', message: '', updated_at: null },
+    };
+}
+
+function normalizeEmsWorkflowTaskStep(rawStep = {}, fallbackValue = {}) {
+    const source = rawStep && typeof rawStep === 'object' ? rawStep : {};
+    return {
+        status: safeText(source.status, fallbackValue.status || 'idle'),
+        message: safeText(source.message, fallbackValue.message),
+        updated_at: source.updated_at || source.updatedAt || fallbackValue.updated_at || fallbackValue.updatedAt || null,
+    };
+}
+
+function normalizeEmsWorkflowTask(rawTask = {}) {
+    const source = rawTask && typeof rawTask === 'object' ? rawTask : {};
+    const fallbackSteps = buildDefaultEmsWorkflowTaskSteps();
+    const rawSteps = source.steps && typeof source.steps === 'object' ? source.steps : {};
+
+    return {
+        id: safeText(source.id),
+        mode: safeText(source.mode, 'single'),
+        status: safeText(source.status, 'idle'),
+        current_step: safeText(source.current_step ?? source.currentStep),
+        error: safeText(source.error),
+        include_track: toBoolean(source.include_track ?? source.includeTrack, true),
+        initiator_id: toInteger(source.initiator_id ?? source.initiatorId, 0),
+        initiator_role: safeText(source.initiator_role ?? source.initiatorRole),
+        enqueued_at: source.enqueued_at || source.enqueuedAt || null,
+        started_at: source.started_at || source.startedAt || null,
+        finished_at: source.finished_at || source.finishedAt || null,
+        updated_at: source.updated_at || source.updatedAt || null,
+        steps: Object.keys(fallbackSteps).reduce((result, key) => {
+            result[key] = normalizeEmsWorkflowTaskStep(rawSteps[key], fallbackSteps[key]);
+            return result;
+        }, {}),
+    };
+}
+
+function normalizeEmsState(rawEms = {}) {
+    const reachable =
+        rawEms.reachable === true || rawEms.reachable === false
+            ? rawEms.reachable
+            : rawEms.reachable === 'true'
+              ? true
+              : rawEms.reachable === 'false'
+                ? false
+                : null;
+
+    return {
+        address_parse_source: safeText(rawEms.address_parse_source ?? rawEms.addressParseSource),
+        address_parse_candidates: Array.isArray(rawEms.address_parse_candidates ?? rawEms.addressParseCandidates)
+            ? (rawEms.address_parse_candidates ?? rawEms.addressParseCandidates).map(normalizeEmsAddressCandidate)
+            : [],
+        receiver: normalizeEmsParty(rawEms.receiver),
+        sender: normalizeEmsParty(rawEms.sender),
+        ecommerce_user_id: safeText(rawEms.ecommerce_user_id ?? rawEms.ecommerceUserId),
+        logistics_order_no: safeText(rawEms.logistics_order_no ?? rawEms.logisticsOrderNo),
+        waybill_no: safeText(rawEms.waybill_no ?? rawEms.waybillNo),
+        route_code: safeText(rawEms.route_code ?? rawEms.routeCode),
+        package_code: safeText(rawEms.package_code ?? rawEms.packageCode),
+        package_code_name: safeText(rawEms.package_code_name ?? rawEms.packageCodeName),
+        mark_destination_code: safeText(rawEms.mark_destination_code ?? rawEms.markDestinationCode),
+        mark_destination_name: safeText(rawEms.mark_destination_name ?? rawEms.markDestinationName),
+        biz_product_no: safeText(rawEms.biz_product_no ?? rawEms.bizProductNo, process.env.EMS_BIZ_PRODUCT_NO || '10'),
+        biz_product_id: safeText(rawEms.biz_product_id ?? rawEms.bizProductId),
+        contents_attribute: safeText(
+            rawEms.contents_attribute ?? rawEms.contentsAttribute,
+            process.env.EMS_CONTENTS_ATTRIBUTE || '3',
+        ),
+        package_weight: safeText(rawEms.package_weight ?? rawEms.packageWeight, process.env.EMS_DEFAULT_WEIGHT_GRAMS || '500'),
+        label_type: safeText(rawEms.label_type ?? rawEms.labelType, process.env.EMS_LABEL_TYPE || '129'),
+        label_url: safeText(rawEms.label_url ?? rawEms.labelUrl),
+        label_file: safeText(rawEms.label_file ?? rawEms.labelFile),
+        label_generated_at: rawEms.label_generated_at || rawEms.labelGeneratedAt || null,
+        address_parsed_at: rawEms.address_parsed_at || rawEms.addressParsedAt || null,
+        waybill_created_at: rawEms.waybill_created_at || rawEms.waybillCreatedAt || null,
+        label_requested_at: rawEms.label_requested_at || rawEms.labelRequestedAt || null,
+        print_status: safeText(rawEms.print_status ?? rawEms.printStatus),
+        print_mode: safeText(rawEms.print_mode ?? rawEms.printMode),
+        print_message: safeText(rawEms.print_message ?? rawEms.printMessage),
+        print_attempted_at: rawEms.print_attempted_at || rawEms.printAttemptedAt || null,
+        printed_at: rawEms.printed_at || rawEms.printedAt || null,
+        last_serial_no: safeText(rawEms.last_serial_no ?? rawEms.lastSerialNo),
+        last_error: safeText(rawEms.last_error ?? rawEms.lastError),
+        last_action: safeText(rawEms.last_action ?? rawEms.lastAction),
+        last_action_at: rawEms.last_action_at || rawEms.lastActionAt || null,
+        reachable,
+        reachable_message: safeText(rawEms.reachable_message ?? rawEms.reachableMessage),
+        reachable_checked_at: rawEms.reachable_checked_at || rawEms.reachableCheckedAt || null,
+        tracking_direction: safeText(rawEms.tracking_direction ?? rawEms.trackingDirection, '0'),
+        track_summary: safeText(rawEms.track_summary ?? rawEms.trackSummary),
+        track_items: Array.isArray(rawEms.track_items ?? rawEms.trackItems)
+            ? (rawEms.track_items ?? rawEms.trackItems).map(normalizeEmsTrackItem)
+            : [],
+        last_track_sync_at: rawEms.last_track_sync_at || rawEms.lastTrackSyncAt || null,
+        auto_track_sync_failure_streak: Math.max(
+            0,
+            toInteger(rawEms.auto_track_sync_failure_streak ?? rawEms.autoTrackSyncFailureStreak, 0),
+        ),
+        auto_track_sync_last_failed_at:
+            rawEms.auto_track_sync_last_failed_at || rawEms.autoTrackSyncLastFailedAt || null,
+        auto_track_sync_last_success_at:
+            rawEms.auto_track_sync_last_success_at || rawEms.autoTrackSyncLastSuccessAt || null,
+        auto_track_sync_last_error: safeText(rawEms.auto_track_sync_last_error ?? rawEms.autoTrackSyncLastError),
+        api_logs: Array.isArray(rawEms.api_logs ?? rawEms.apiLogs)
+            ? (rawEms.api_logs ?? rawEms.apiLogs).map(normalizeEmsApiLog)
+            : [],
+        workflow_task:
+            rawEms.workflow_task || rawEms.workflowTask ? normalizeEmsWorkflowTask(rawEms.workflow_task ?? rawEms.workflowTask) : null,
+        order_payload: rawEms.order_payload && typeof rawEms.order_payload === 'object' ? rawEms.order_payload : rawEms.orderPayload || null,
+        order_response:
+            rawEms.order_response && typeof rawEms.order_response === 'object' ? rawEms.order_response : rawEms.orderResponse || null,
+        label_payload: rawEms.label_payload && typeof rawEms.label_payload === 'object' ? rawEms.label_payload : rawEms.labelPayload || null,
+        label_response:
+            rawEms.label_response && typeof rawEms.label_response === 'object' ? rawEms.label_response : rawEms.labelResponse || null,
+        print_payload: rawEms.print_payload && typeof rawEms.print_payload === 'object' ? rawEms.print_payload : rawEms.printPayload || null,
+        print_response:
+            rawEms.print_response && typeof rawEms.print_response === 'object' ? rawEms.print_response : rawEms.printResponse || null,
+        track_payload: rawEms.track_payload && typeof rawEms.track_payload === 'object' ? rawEms.track_payload : rawEms.trackPayload || null,
+        track_response:
+            rawEms.track_response && typeof rawEms.track_response === 'object' ? rawEms.track_response : rawEms.trackResponse || null,
+        parse_payload: rawEms.parse_payload && typeof rawEms.parse_payload === 'object' ? rawEms.parse_payload : rawEms.parsePayload || null,
+        parse_response:
+            rawEms.parse_response && typeof rawEms.parse_response === 'object' ? rawEms.parse_response : rawEms.parseResponse || null,
+        validate_payload:
+            rawEms.validate_payload && typeof rawEms.validate_payload === 'object'
+                ? rawEms.validate_payload
+                : rawEms.validatePayload || null,
+        validate_response:
+            rawEms.validate_response && typeof rawEms.validate_response === 'object'
+                ? rawEms.validate_response
+                : rawEms.validateResponse || null,
     };
 }
 
@@ -384,6 +719,7 @@ function normalizeOrder(rawOrder = {}) {
         },
         admin_note: safeText(rawOrder.admin_note),
         internal_tags: toStringArray(rawOrder.internal_tags),
+        user_notice_center: normalizeUserNoticeCenter(rawOrder.user_notice_center ?? rawOrder.userNoticeCenter),
         processing_logs: Array.isArray(rawOrder.processing_logs)
             ? rawOrder.processing_logs.map((item) => ({
                   time: item?.time || new Date().toISOString(),
@@ -395,6 +731,7 @@ function normalizeOrder(rawOrder = {}) {
             : [],
         logistics_company: safeText(rawOrder.logistics_company),
         merchant_tracking_number: safeText(rawOrder.merchant_tracking_number),
+        ems: normalizeEmsState(rawOrder.ems),
         created_at: rawOrder.created_at || new Date().toISOString(),
         reviewed_at: rawOrder.reviewed_at || null,
         shipped_at: rawOrder.shipped_at || null,
@@ -451,7 +788,141 @@ function sqlBoolean(value) {
     return value ? 1 : 0;
 }
 
+const COLLECTION_CONFIG = {
+    users: {
+        tableName: 'users',
+        filePath: USERS_FILE,
+        defaultValue: () => [buildDefaultAdmin()],
+        normalize: normalizeUser,
+        orderBy: 'id ASC',
+        sort: (left, right) => left.id - right.id,
+        columns: ['id', 'phone', 'username', 'password', 'nickname', 'role', 'payload'],
+        toRow: (user) => [
+            user.id,
+            user.phone || null,
+            user.username || null,
+            user.password || '',
+            user.nickname || '',
+            user.role,
+            serializePayload(user),
+        ],
+    },
+    plans: {
+        tableName: 'plans',
+        filePath: PLANS_FILE,
+        defaultValue: () => DEFAULT_PLANS,
+        normalize: normalizePlan,
+        orderBy: 'sort_order ASC, id DESC',
+        sort: (left, right) => left.sort_order - right.sort_order || right.id - left.id,
+        columns: ['id', 'slug', 'name', 'status', 'featured', 'hot_rank', 'sort_order', 'payload'],
+        toRow: (plan) => [
+            plan.id,
+            plan.slug || null,
+            plan.name,
+            plan.status,
+            sqlBoolean(plan.featured),
+            plan.hot_rank,
+            plan.sort_order,
+            serializePayload(plan),
+        ],
+    },
+    devices: {
+        tableName: 'devices',
+        filePath: DEVICES_FILE,
+        defaultValue: () => DEFAULT_DEVICES,
+        normalize: normalizeDevice,
+        orderBy: 'sort_order ASC, id DESC',
+        sort: (left, right) => left.sort_order - right.sort_order || right.id - left.id,
+        columns: ['id', 'slug', 'name', 'status', 'featured', 'hot_rank', 'sort_order', 'stock', 'payload'],
+        toRow: (device) => [
+            device.id,
+            device.slug || null,
+            device.name,
+            device.status,
+            sqlBoolean(device.featured),
+            device.hot_rank,
+            device.sort_order,
+            device.stock,
+            serializePayload(device),
+        ],
+    },
+    orders: {
+        tableName: 'orders',
+        filePath: ORDERS_FILE,
+        defaultValue: () => [],
+        normalize: normalizeOrder,
+        orderBy: 'created_at ASC, id ASC',
+        sort: (left, right) => new Date(left.created_at) - new Date(right.created_at) || left.id - right.id,
+        columns: ['id', 'order_no', 'user_id', 'status', 'flow_type', 'created_at', 'payload'],
+        toRow: (order) => [
+            order.id,
+            order.order_no,
+            order.user_id,
+            order.status,
+            order.flow_type,
+            formatSqlDateTime(order.created_at),
+            serializePayload(order),
+        ],
+    },
+};
+
+function writeJson(filePath, value) {
+    ensureDir(path.dirname(filePath));
+    fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
+function normalizeCollection(config, records = []) {
+    return [...records].map(config.normalize).sort(config.sort);
+}
+
+function readJsonCollection(config) {
+    const fallbackValue = fs.existsSync(config.filePath) ? [] : config.defaultValue();
+    const source = readJson(config.filePath, fallbackValue);
+    return normalizeCollection(config, Array.isArray(source) ? source : fallbackValue);
+}
+
+function replaceJsonCollection(config, records = []) {
+    const nextRecords = normalizeCollection(config, records);
+    writeJson(config.filePath, nextRecords);
+    return nextRecords;
+}
+
+function upsertJsonCollection(config, records = []) {
+    const nextRecords = normalizeCollection(config, records);
+    if (!nextRecords.length) {
+        return readJsonCollection(config);
+    }
+
+    const mergedRecords = new Map(readJsonCollection(config).map((item) => [item.id, item]));
+    nextRecords.forEach((item) => {
+        mergedRecords.set(item.id, item);
+    });
+
+    const sortedRecords = [...mergedRecords.values()].sort(config.sort);
+    writeJson(config.filePath, sortedRecords);
+    return sortedRecords;
+}
+
+function deleteJsonCollection(config, ids = []) {
+    const deleteIds = new Set(ids.map((item) => toInteger(item, 0)).filter((item) => item > 0));
+    if (!deleteIds.size) {
+        return readJsonCollection(config);
+    }
+
+    const nextRecords = readJsonCollection(config).filter((item) => !deleteIds.has(item.id));
+    writeJson(config.filePath, nextRecords);
+    return nextRecords;
+}
+
 async function connectDatabase() {
+    if (STORAGE_DRIVER !== 'mysql') {
+        throw new Error('当前存储模式不是 mysql，无法创建数据库连接。');
+    }
+
+    if (!MYSQL_CONFIGURED) {
+        throw new Error('MYSQL_HOST / MYSQL_DATABASE / MYSQL_USER / MYSQL_PASSWORD 未完整配置。');
+    }
+
     if (!mysqlPool) {
         mysqlPool = mysql.createPool({
             host: MYSQL_HOST,
@@ -564,112 +1035,159 @@ async function ensureTables() {
     `);
 }
 
-async function readUsers() {
+async function readCollection(config) {
+    if (STORAGE_DRIVER === 'json') {
+        return readJsonCollection(config);
+    }
+
     const pool = await connectDatabase();
-    const [rows] = await pool.query('SELECT payload FROM users ORDER BY id ASC');
-    return rows.map((row) => normalizeUser(parsePayload(row.payload, {})));
+    const [rows] = await pool.query(`SELECT payload FROM ${config.tableName} ORDER BY ${config.orderBy}`);
+    return rows.map((row) => config.normalize(parsePayload(row.payload, {})));
+}
+
+async function upsertCollection(config, records = [], connection = null) {
+    const nextRecords = normalizeCollection(config, records);
+    if (!nextRecords.length) {
+        return nextRecords;
+    }
+
+    if (STORAGE_DRIVER === 'json') {
+        upsertJsonCollection(config, nextRecords);
+        return nextRecords;
+    }
+
+    const executor = connection || (await connectDatabase());
+    const updates = config.columns
+        .filter((column) => column !== 'id')
+        .map((column) => `${column} = VALUES(${column})`)
+        .join(', ');
+
+    await executor.query(
+        `INSERT INTO ${config.tableName} (${config.columns.join(', ')}) VALUES ? ON DUPLICATE KEY UPDATE ${updates}`,
+        [nextRecords.map(config.toRow)],
+    );
+
+    return nextRecords;
+}
+
+async function deleteCollectionByIds(config, ids = [], connection = null) {
+    const deleteIds = ids.map((item) => toInteger(item, 0)).filter((item) => item > 0);
+    if (!deleteIds.length) {
+        return;
+    }
+
+    if (STORAGE_DRIVER === 'json') {
+        deleteJsonCollection(config, deleteIds);
+        return;
+    }
+
+    const executor = connection || (await connectDatabase());
+    await executor.query(`DELETE FROM ${config.tableName} WHERE id IN (?)`, [deleteIds]);
+}
+
+async function replaceCollection(config, records = []) {
+    const nextRecords = normalizeCollection(config, records);
+
+    if (STORAGE_DRIVER === 'json') {
+        replaceJsonCollection(config, nextRecords);
+        return nextRecords;
+    }
+
+    await withTransaction(async (connection) => {
+        if (!nextRecords.length) {
+            await connection.query(`DELETE FROM ${config.tableName}`);
+            return;
+        }
+
+        const ids = nextRecords.map((item) => item.id);
+        await connection.query(`DELETE FROM ${config.tableName} WHERE id NOT IN (?)`, [ids]);
+        await upsertCollection(config, nextRecords, connection);
+    });
+
+    return nextRecords;
+}
+
+async function readUsers() {
+    return readCollection(COLLECTION_CONFIG.users);
 }
 
 async function writeUsers(users) {
-    const nextUsers = users.map(normalizeUser);
-    await withTransaction(async (connection) => {
-        await connection.query('DELETE FROM users');
-        if (!nextUsers.length) return;
-        const values = nextUsers.map((user) => [
-            user.id,
-            user.phone || null,
-            user.username || null,
-            user.password || '',
-            user.nickname || '',
-            user.role,
-            serializePayload(user),
-        ]);
-        await connection.query('INSERT INTO users (id, phone, username, password, nickname, role, payload) VALUES ?', [values]);
-    });
-    return nextUsers;
+    return replaceCollection(COLLECTION_CONFIG.users, users);
+}
+
+async function saveUser(user) {
+    const [savedUser] = await upsertCollection(COLLECTION_CONFIG.users, [user]);
+    return savedUser;
 }
 
 async function readPlans() {
-    const pool = await connectDatabase();
-    const [rows] = await pool.query('SELECT payload FROM plans ORDER BY sort_order ASC, id DESC');
-    return rows.map((row) => normalizePlan(parsePayload(row.payload, {})));
+    return readCollection(COLLECTION_CONFIG.plans);
 }
 
 async function writePlans(plans) {
-    const nextPlans = plans.map(normalizePlan);
-    await withTransaction(async (connection) => {
-        await connection.query('DELETE FROM plans');
-        if (!nextPlans.length) return;
-        const values = nextPlans.map((plan) => [
-            plan.id,
-            plan.slug || null,
-            plan.name,
-            plan.status,
-            sqlBoolean(plan.featured),
-            plan.hot_rank,
-            plan.sort_order,
-            serializePayload(plan),
-        ]);
-        await connection.query('INSERT INTO plans (id, slug, name, status, featured, hot_rank, sort_order, payload) VALUES ?', [values]);
-    });
-    return nextPlans;
+    return replaceCollection(COLLECTION_CONFIG.plans, plans);
+}
+
+async function savePlan(plan) {
+    const [savedPlan] = await upsertCollection(COLLECTION_CONFIG.plans, [plan]);
+    return savedPlan;
+}
+
+async function deletePlan(planId) {
+    await deleteCollectionByIds(COLLECTION_CONFIG.plans, [planId]);
 }
 
 async function readDevices() {
-    const pool = await connectDatabase();
-    const [rows] = await pool.query('SELECT payload FROM devices ORDER BY sort_order ASC, id DESC');
-    return rows.map((row) => normalizeDevice(parsePayload(row.payload, {})));
+    return readCollection(COLLECTION_CONFIG.devices);
 }
 
 async function writeDevices(devices) {
-    const nextDevices = devices.map(normalizeDevice);
-    await withTransaction(async (connection) => {
-        await connection.query('DELETE FROM devices');
-        if (!nextDevices.length) return;
-        const values = nextDevices.map((device) => [
-            device.id,
-            device.slug || null,
-            device.name,
-            device.status,
-            sqlBoolean(device.featured),
-            device.hot_rank,
-            device.sort_order,
-            device.stock,
-            serializePayload(device),
-        ]);
-        await connection.query('INSERT INTO devices (id, slug, name, status, featured, hot_rank, sort_order, stock, payload) VALUES ?', [
-            values,
-        ]);
-    });
-    return nextDevices;
+    return replaceCollection(COLLECTION_CONFIG.devices, devices);
+}
+
+async function saveDevice(device) {
+    const [savedDevice] = await upsertCollection(COLLECTION_CONFIG.devices, [device]);
+    return savedDevice;
+}
+
+async function deleteDevice(deviceId) {
+    await deleteCollectionByIds(COLLECTION_CONFIG.devices, [deviceId]);
 }
 
 async function readOrders() {
-    const pool = await connectDatabase();
-    const [rows] = await pool.query('SELECT payload FROM orders ORDER BY created_at ASC, id ASC');
-    return rows.map((row) => normalizeOrder(parsePayload(row.payload, {})));
+    return readCollection(COLLECTION_CONFIG.orders);
 }
 
 async function writeOrders(orders) {
-    const nextOrders = orders.map(normalizeOrder);
-    await withTransaction(async (connection) => {
-        await connection.query('DELETE FROM orders');
-        if (!nextOrders.length) return;
-        const values = nextOrders.map((order) => [
-            order.id,
-            order.order_no,
-            order.user_id,
-            order.status,
-            order.flow_type,
-            formatSqlDateTime(order.created_at),
-            serializePayload(order),
-        ]);
-        await connection.query('INSERT INTO orders (id, order_no, user_id, status, flow_type, created_at, payload) VALUES ?', [values]);
-    });
-    return nextOrders;
+    return replaceCollection(COLLECTION_CONFIG.orders, orders);
+}
+
+async function saveOrder(order) {
+    const [savedOrder] = await upsertCollection(COLLECTION_CONFIG.orders, [order]);
+    return savedOrder;
+}
+
+async function writeSettingsToStorage(settings, executor = null) {
+    const normalizedSettings = normalizeSettings(settings);
+
+    if (STORAGE_DRIVER === 'json') {
+        writeJson(SETTINGS_FILE, normalizedSettings);
+        return normalizedSettings;
+    }
+
+    const target = executor || (await connectDatabase());
+    await target.query('REPLACE INTO settings (setting_key, payload) VALUES (?, ?)', [
+        'store_settings',
+        serializePayload(normalizedSettings),
+    ]);
+    return normalizedSettings;
 }
 
 async function readSettings() {
+    if (STORAGE_DRIVER === 'json') {
+        return normalizeSettings(readJson(SETTINGS_FILE, DEFAULT_SETTINGS));
+    }
+
     const pool = await connectDatabase();
     const [rows] = await pool.query('SELECT payload FROM settings WHERE setting_key = ?', ['store_settings']);
     if (!rows.length) {
@@ -679,25 +1197,84 @@ async function readSettings() {
 }
 
 async function writeSettings(settings) {
-    const normalizedSettings = normalizeSettings(settings);
-    const pool = await connectDatabase();
-    await pool.query('REPLACE INTO settings (setting_key, payload) VALUES (?, ?)', [
-        'store_settings',
-        serializePayload(normalizedSettings),
-    ]);
-    return normalizedSettings;
+    return writeSettingsToStorage(settings);
+}
+
+async function commitStoreChanges({
+    users = [],
+    plans = [],
+    devices = [],
+    orders = [],
+    deleteUserIds = [],
+    deletePlanIds = [],
+    deleteDeviceIds = [],
+    deleteOrderIds = [],
+    settings,
+} = {}) {
+    if (STORAGE_DRIVER === 'json') {
+        if (users.length) upsertJsonCollection(COLLECTION_CONFIG.users, users);
+        if (plans.length) upsertJsonCollection(COLLECTION_CONFIG.plans, plans);
+        if (devices.length) upsertJsonCollection(COLLECTION_CONFIG.devices, devices);
+        if (orders.length) upsertJsonCollection(COLLECTION_CONFIG.orders, orders);
+        if (deleteUserIds.length) deleteJsonCollection(COLLECTION_CONFIG.users, deleteUserIds);
+        if (deletePlanIds.length) deleteJsonCollection(COLLECTION_CONFIG.plans, deletePlanIds);
+        if (deleteDeviceIds.length) deleteJsonCollection(COLLECTION_CONFIG.devices, deleteDeviceIds);
+        if (deleteOrderIds.length) deleteJsonCollection(COLLECTION_CONFIG.orders, deleteOrderIds);
+        if (settings !== undefined) {
+            await writeSettingsToStorage(settings);
+        }
+        return;
+    }
+
+    await withTransaction(async (connection) => {
+        await upsertCollection(COLLECTION_CONFIG.users, users, connection);
+        await upsertCollection(COLLECTION_CONFIG.plans, plans, connection);
+        await upsertCollection(COLLECTION_CONFIG.devices, devices, connection);
+        await upsertCollection(COLLECTION_CONFIG.orders, orders, connection);
+        await deleteCollectionByIds(COLLECTION_CONFIG.users, deleteUserIds, connection);
+        await deleteCollectionByIds(COLLECTION_CONFIG.plans, deletePlanIds, connection);
+        await deleteCollectionByIds(COLLECTION_CONFIG.devices, deleteDeviceIds, connection);
+        await deleteCollectionByIds(COLLECTION_CONFIG.orders, deleteOrderIds, connection);
+        if (settings !== undefined) {
+            await writeSettingsToStorage(settings, connection);
+        }
+    });
 }
 
 async function countRows(tableName) {
+    if (tableName === 'settings') {
+        if (STORAGE_DRIVER === 'json') {
+            return fs.existsSync(SETTINGS_FILE) ? 1 : 0;
+        }
+
+        const pool = await connectDatabase();
+        const [rows] = await pool.query('SELECT COUNT(*) AS total FROM settings WHERE setting_key = ?', ['store_settings']);
+        return Number(rows[0]?.total || 0);
+    }
+
+    const config = COLLECTION_CONFIG[tableName];
+    if (!config) {
+        throw new Error(`不支持的表名: ${tableName}`);
+    }
+
+    if (STORAGE_DRIVER === 'json') {
+        return readJsonCollection(config).length;
+    }
+
     const pool = await connectDatabase();
-    const [rows] = await pool.query(`SELECT COUNT(*) AS total FROM ${tableName}`);
+    const [rows] = await pool.query(`SELECT COUNT(*) AS total FROM ${config.tableName}`);
     return Number(rows[0]?.total || 0);
 }
 
 async function seedUsersIfEmpty() {
     if (await countRows('users')) return;
-    const source = readJson(USERS_FILE, [DEFAULT_ADMIN]);
-    const users = Array.isArray(source) && source.length ? source : [DEFAULT_ADMIN];
+
+    const source = readJson(USERS_FILE, [buildDefaultAdmin()]);
+    const users = Array.isArray(source) && source.length ? source.map(normalizeUser) : [buildDefaultAdmin()];
+    if (!users.some((item) => item.role === 'admin')) {
+        users.unshift(buildDefaultAdmin());
+    }
+
     await writeUsers(users);
 }
 
@@ -723,9 +1300,7 @@ async function seedOrdersIfEmpty() {
 }
 
 async function seedSettingsIfEmpty() {
-    const pool = await connectDatabase();
-    const [rows] = await pool.query('SELECT setting_key FROM settings WHERE setting_key = ?', ['store_settings']);
-    if (rows.length) return;
+    if (await countRows('settings')) return;
     const source = readJson(SETTINGS_FILE, DEFAULT_SETTINGS);
     await writeSettings(source);
 }
@@ -734,8 +1309,10 @@ async function bootstrapData() {
     ensureDir(DATA_DIR);
     ensureDir(UPLOAD_DIR);
 
-    await connectDatabase();
-    await ensureTables();
+    if (STORAGE_DRIVER === 'mysql') {
+        await connectDatabase();
+        await ensureTables();
+    }
 
     await seedUsersIfEmpty();
     await seedPlansIfEmpty();
@@ -744,38 +1321,30 @@ async function bootstrapData() {
     await seedSettingsIfEmpty();
 
     const users = await readUsers();
-    const adminIndex = users.findIndex((user) => user.phone === ADMIN_PHONE);
+    const existingAdmin =
+        users.find((item) => item.role === 'admin' && item.phone === ADMIN_PHONE) ||
+        users.find((item) => item.role === 'admin' && item.username === ADMIN_USERNAME) ||
+        users.find((item) => item.role === 'admin');
+    const normalizedAdmin = buildDefaultAdmin(existingAdmin || {});
+    await saveUser(normalizedAdmin);
 
-    if (adminIndex === -1) {
-        users.push(DEFAULT_ADMIN);
-    } else {
-        users[adminIndex] = normalizeUser({
-            ...DEFAULT_ADMIN,
-            ...users[adminIndex],
-            id: DEFAULT_ADMIN.id,
-            phone: DEFAULT_ADMIN.phone,
-            role: 'admin',
-        });
+    const currentSettings = await readSettings();
+    const normalizedSettings = normalizeSettings(currentSettings);
+    if (serializePayload(currentSettings) !== serializePayload(normalizedSettings)) {
+        await writeSettings(normalizedSettings);
     }
-
-    await writeUsers(users);
-    await writePlans(await readPlans());
-    await writeDevices(await readDevices());
-    await writeOrders(await readOrders());
-    await writeSettings(await readSettings());
 }
 
 module.exports = {
     ADMIN_PHONE,
     ADMIN_USERNAME,
-    ADMIN_PASSWORD,
     DATA_DIR,
     DEVICE_CATEGORIES,
     DEVICES_FILE,
     FLOW_TYPES,
+    MYSQL_CONFIGURED,
     MYSQL_DATABASE,
     MYSQL_HOST,
-    MYSQL_PASSWORD,
     MYSQL_PORT,
     MYSQL_USER,
     ORDER_STATUSES,
@@ -783,11 +1352,15 @@ module.exports = {
     PLANS_FILE,
     ROOT_DIR,
     SETTINGS_FILE,
+    STORAGE_DRIVER,
     UPLOAD_DIR,
     USERS_FILE,
     bootstrapData,
     buildOrderSummary,
+    commitStoreChanges,
     connectDatabase,
+    deleteDevice,
+    deletePlan,
     makeOrderNo,
     makeSlug,
     normalizeDevice,
@@ -801,6 +1374,10 @@ module.exports = {
     readPlans,
     readSettings,
     readUsers,
+    saveDevice,
+    saveOrder,
+    savePlan,
+    saveUser,
     toBoolean,
     toInteger,
     toNumber,

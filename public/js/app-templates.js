@@ -1,4 +1,4 @@
-window.AppTemplates = (() => {
+﻿window.AppTemplates = (() => {
     const storefrontTemplate = `
 <template v-if="!isAdminEntry">
   <div class="page-shell">
@@ -59,7 +59,7 @@ window.AppTemplates = (() => {
           <article class="hero-metric accent">
             <span>现货设备</span>
             <strong>{{ devices.length }}</strong>
-            <p>支持随身 WiFi、4G CPE 等设备选购配卡。</p>
+            <p>支持随身 WiFi、4G/5G CPE 等设备选购配卡。</p>
           </article>
           <article class="hero-metric warm">
             <span>收款方式</span>
@@ -75,7 +75,7 @@ window.AppTemplates = (() => {
         <div>
           <p class="section-kicker">新手下单</p>
           <h2>手机端三步完成下单</h2>
-          <p class="section-desc">绝大多数用户都是手机访问，所以首页直接把最核心的 3 步说明清楚，避免来回问。</p>
+          <p class="section-desc">绝大多数用户都是手机访问，所以首页直接把最核心的 3 步说明清楚，避免来回问答。</p>
         </div>
       </div>
       <div class="onboarding-grid">
@@ -116,7 +116,7 @@ window.AppTemplates = (() => {
           <div class="plan-quick-info">
             <span class="mini-badge">{{ plan.badge || plan.network_type || '套餐' }}</span>
             <strong>{{ plan.name }}</strong>
-            <span>{{ plan.carrier || '多网可选' }} / {{ plan.network_type || '4G/5G' }}</span>
+            <span>{{ plan.carrier || '多网可用' }} / {{ plan.network_type || '4G/5G' }}</span>
             <span class="sales-copy">{{ planSalesText(plan, index) }}</span>
           </div>
         </button>
@@ -134,16 +134,16 @@ window.AppTemplates = (() => {
             </div>
             <div class="price-box">
               <strong>{{ selectedPlan.monthly_price > 0 ? currency(selectedPlan.monthly_price) : '以图为准' }}</strong>
-              <span>{{ selectedPlan.monthly_price > 0 ? '/ 月参考' : '资费以图片为准' }}</span>
+              <span>{{ selectedPlan.monthly_price > 0 ? '/ 月参考价' : '资费以图片为准' }}</span>
             </div>
           </div>
           <div class="info-grid">
             <div><span>套餐流量</span><strong>{{ selectedPlan.monthly_data || '以图片说明为准' }}</strong></div>
             <div><span>配卡服务</span><strong>{{ selectedPlan.setup_price > 0 ? currency(selectedPlan.setup_price) : '咨询客服' }}</strong></div>
             <div><span>网络类型</span><strong>{{ selectedPlan.network_type || '4G/5G' }}</strong></div>
-            <div><span>运营商</span><strong>{{ selectedPlan.carrier || '多网可选' }}</strong></div>
+            <div><span>运营商</span><strong>{{ selectedPlan.carrier || '多网可用' }}</strong></div>
           </div>
-          <p class="body-copy">{{ selectedPlan.best_for || '适合根据设备场景灵活搭配。' }}</p>
+          <p class="body-copy">{{ selectedPlan.best_for || '适合根据设备场景灵活搭配' }}</p>
           <p class="muted-copy">套餐具体资费、速率、地区限制等都以图片内容为准。</p>
           <div class="sales-panel">
             <span class="spotlight-chip">{{ selectedPlan.featured ? '当前热销套餐' : '热门搭配推荐' }}</span>
@@ -193,7 +193,7 @@ window.AppTemplates = (() => {
     <section class="section-card" id="hot-bundles">
       <div v-if="shopReceivingText" class="address-spotlight">
         <div>
-          <p class="section-kicker">寄设备地址</p>
+          <p class="section-kicker">寄送地址</p>
           <h3>寄设备配卡前，先确认商家收件信息</h3>
           <p class="body-copy">{{ shopReceivingText }}</p>
           <p class="muted-copy">后台修改后，这里的收件人、电话和地址会实时同步更新，用户下单前可以直接复制使用。</p>
@@ -226,7 +226,7 @@ window.AppTemplates = (() => {
               <span class="pill">配卡费 {{ currency(bundle.plan.setup_price) }}</span>
               <span class="pill">设备价 {{ currency(bundle.device.price) }}</span>
             </div>
-            <button class="solid-btn wide-btn" @click="openBuilder('buy_device', { deviceId: bundle.device.id, planId: bundle.plan.id })">直接下这组</button>
+            <button class="solid-btn wide-btn" @click="openBuilder('buy_device', { deviceId: bundle.device.id, planId: bundle.plan.id })">直接下这单</button>
           </div>
         </article>
       </div>
@@ -237,7 +237,7 @@ window.AppTemplates = (() => {
       <div class="section-head">
         <div>
           <p class="section-kicker">第三步</p>
-          <h2>设备选购区</h2>
+          <h2>设备选购</h2>
           <p class="section-desc">如果用户选择购买设备配卡，就在这里继续选设备。设备和套餐会一起进入订单，不会出现单独卖卡的路径。</p>
         </div>
       </div>
@@ -379,6 +379,13 @@ window.AppTemplates = (() => {
     </section>
 
     <section v-if="adminTab === 'dashboard'" class="admin-panel">
+      <div v-if="adminDashboard.ems_auto_track_sync_fail_count" class="warning-strip danger-lite">
+        <strong>EMS 自动轨迹同步告警</strong>
+        <p>当前有 {{ adminDashboard.ems_auto_track_sync_fail_count }} 个订单自动同步连续失败 2 次及以上，请优先排查 EMS 接口、网络或单号状态。</p>
+        <div class="inline-badges">
+          <span v-for="item in adminDashboard.ems_auto_track_sync_fail_orders" :key="item.id">{{ item.order_no }} / 连续 {{ item.failure_count }} 次</span>
+        </div>
+      </div>
       <div class="dashboard-grid">
         <article class="dashboard-card"><span>上架套餐</span><strong>{{ adminDashboard.plan_count }}</strong></article>
         <article class="dashboard-card"><span>上架设备</span><strong>{{ adminDashboard.device_count }}</strong></article>
@@ -390,6 +397,10 @@ window.AppTemplates = (() => {
       <div class="dashboard-grid secondary">
         <article class="summary-card"><h3>购买设备配卡订单</h3><strong>{{ adminDashboard.buy_device_count }}</strong></article>
         <article class="summary-card"><h3>寄设备配卡订单</h3><strong>{{ adminDashboard.ship_device_count }}</strong></article>
+        <article class="summary-card"><h3>EMS 异常单</h3><strong>{{ adminDashboard.ems_error_count }}</strong></article>
+        <article class="summary-card"><h3>待取面单</h3><strong>{{ adminDashboard.ems_pending_label_count }}</strong></article>
+        <article class="summary-card"><h3>待打印</h3><strong>{{ adminDashboard.ems_pending_print_count }}</strong></article>
+        <article class="summary-card"><h3>轨迹待同步</h3><strong>{{ adminDashboard.ems_stale_track_count }}</strong></article>
         <article class="summary-card wide-card">
           <h3>低库存提醒</h3>
           <div v-if="adminDashboard.low_stock_devices.length" class="inline-badges">
@@ -398,6 +409,71 @@ window.AppTemplates = (() => {
           <p v-else class="muted-copy">当前没有低库存设备。</p>
         </article>
       </div>
+      <section class="account-panel">
+        <div class="section-head compact-head">
+          <div>
+            <h3>EMS 连续失败告警</h3>
+            <p class="section-desc">连续 2 次及以上失败的建单、打印、轨迹同步订单会在这里优先高亮。</p>
+          </div>
+        </div>
+        <div class="dashboard-grid secondary">
+          <article class="summary-card danger-lite">
+            <h3>建单连续失败</h3>
+            <strong>{{ adminDashboard.ems_consecutive_create_fail_count }}</strong>
+            <div v-if="adminDashboard.ems_consecutive_create_fail_orders.length" class="inline-badges">
+              <span v-for="item in adminDashboard.ems_consecutive_create_fail_orders" :key="item.id">{{ item.order_no }} / 连续 {{ item.failure_count }} 次</span>
+            </div>
+            <p v-else class="muted-copy">当前没有连续失败的建单订单。</p>
+          </article>
+          <article class="summary-card danger-lite">
+            <h3>打印连续失败</h3>
+            <strong>{{ adminDashboard.ems_consecutive_print_fail_count }}</strong>
+            <div v-if="adminDashboard.ems_consecutive_print_fail_orders.length" class="inline-badges">
+              <span v-for="item in adminDashboard.ems_consecutive_print_fail_orders" :key="item.id">{{ item.order_no }} / 连续 {{ item.failure_count }} 次</span>
+            </div>
+            <p v-else class="muted-copy">当前没有连续失败的打印订单。</p>
+          </article>
+          <article class="summary-card danger-lite">
+            <h3>轨迹同步连续失败</h3>
+            <strong>{{ adminDashboard.ems_consecutive_track_fail_count }}</strong>
+            <div v-if="adminDashboard.ems_consecutive_track_fail_orders.length" class="inline-badges">
+              <span v-for="item in adminDashboard.ems_consecutive_track_fail_orders" :key="item.id">{{ item.order_no }} / 连续 {{ item.failure_count }} 次</span>
+            </div>
+            <p v-else class="muted-copy">当前没有连续失败的轨迹同步订单。</p>
+          </article>
+          <article class="summary-card danger-lite">
+            <h3>自动同步连续失败</h3>
+            <strong>{{ adminDashboard.ems_auto_track_sync_fail_count }}</strong>
+            <div v-if="adminDashboard.ems_auto_track_sync_fail_orders.length" class="inline-badges">
+              <span v-for="item in adminDashboard.ems_auto_track_sync_fail_orders" :key="item.id">{{ item.order_no }} / 连续 {{ item.failure_count }} 次</span>
+            </div>
+            <p v-else class="muted-copy">当前没有自动同步连续失败的订单。</p>
+          </article>
+        </div>
+      </section>
+      <section class="account-panel">
+        <div class="section-head compact-head">
+          <div>
+            <h3>EMS 问题订单</h3>
+            <p class="section-desc">这里会优先展示有错误、缺面单、缺打印或轨迹久未同步的订单。</p>
+          </div>
+        </div>
+        <div v-if="adminDashboard.ems_problem_orders && adminDashboard.ems_problem_orders.length" class="log-list">
+          <article v-for="problem in adminDashboard.ems_problem_orders" :key="problem.id" class="log-item">
+            <div class="log-item-head">
+              <strong>{{ problem.order_no }} / {{ problem.customer_name }}</strong>
+              <span>{{ problem.last_action_at ? formatDateTime(problem.last_action_at) : '待处理' }}</span>
+            </div>
+            <p>{{ problem.issue }}</p>
+            <div class="copy-inline">
+              <button class="outline-btn small" @click="copyText(problem.order_no, '订单号已复制')">复制订单号</button>
+              <button v-if="problem.waybill_no" class="outline-btn small" @click="copyText(problem.waybill_no, 'EMS 单号已复制')">复制单号</button>
+              <button class="outline-btn small" @click="setAdminTab('orders')">去订单处理</button>
+            </div>
+          </article>
+        </div>
+        <div v-else class="empty-box compact-empty">当前没有待关注的 EMS 问题订单。</div>
+      </section>
     </section>
 
     <section v-if="adminTab === 'plans'" class="admin-panel">
@@ -418,7 +494,7 @@ window.AppTemplates = (() => {
             </div>
             <p class="body-copy">{{ plan.best_for || '暂无补充说明' }}</p>
             <div class="pill-row">
-              <span class="pill">{{ plan.monthly_price > 0 ? currency(plan.monthly_price) + '/月' : '资费以图片为准' }}</span>
+              <span class="pill">{{ plan.monthly_price > 0 ? currency(plan.monthly_price) + '/月参考' : '资费以图片为准' }}</span>
               <span class="pill">配卡费 {{ currency(plan.setup_price) }}</span>
               <span class="pill">{{ plan.network_type || '4G/5G' }}</span>
             </div>
@@ -479,11 +555,30 @@ window.AppTemplates = (() => {
         <button class="solid-btn" :disabled="savingStates.adminOrders" @click="fetchAdminOrders">{{ savingStates.adminOrders ? '查询中...' : '查询' }}</button>
         <button class="outline-btn" :disabled="savingStates.exportOrders" @click="exportAdminOrders">{{ savingStates.exportOrders ? '导出中...' : '导出订单' }}</button>
       </div>
+      <div class="batch-toolbar">
+        <label class="switch-line">
+          <input type="checkbox" :checked="adminOrders.length && selectedAdminOrderIds.length === adminOrders.length" @change="toggleAllAdminOrders">
+          <span>本页全选</span>
+        </label>
+        <span class="muted-copy">已选 {{ selectedAdminOrderIds.length }} 单</span>
+        <button class="solid-btn small" :disabled="savingStates.batchOrders" @click="runBatchAdminAction('workflow')">批量一键处理</button>
+        <button class="outline-btn small" :disabled="savingStates.batchOrders" @click="runBatchAdminAction('parse')">批量解析</button>
+        <button class="outline-btn small" :disabled="savingStates.batchOrders" @click="runBatchAdminAction('validate')">批量校验</button>
+        <button class="outline-btn small" :disabled="savingStates.batchOrders" @click="runBatchAdminAction('create')">批量建单</button>
+        <button class="outline-btn small" :disabled="savingStates.batchOrders" @click="runBatchAdminAction('label')">批量取面单</button>
+        <button class="outline-btn small" :disabled="savingStates.batchOrders" @click="runBatchAdminAction('print')">批量打印</button>
+        <button class="outline-btn small" :disabled="savingStates.batchOrders" @click="runBatchAdminAction('track')">批量查轨迹</button>
+        <button class="ghost-btn dark small" :disabled="!selectedAdminOrderIds.length" @click="clearAdminOrderSelection">清空选择</button>
+      </div>
       <div v-if="adminOrders.length" class="order-admin-list">
         <article v-for="order in adminOrders" :key="order.id" class="order-admin-card" :class="{ urgent: isUrgentOrder(order) }">
           <div class="order-topline">
             <div>
               <div class="copy-inline">
+                <label class="switch-line">
+                  <input type="checkbox" :checked="isAdminOrderSelected(order.id)" @change="toggleAdminOrderSelection(order.id)">
+                  <span>选择</span>
+                </label>
                 <strong>{{ order.order_no }}</strong>
                 <button class="outline-btn small" @click="copyText(order.order_no, '订单号已复制')">复制订单号</button>
                 <button class="outline-btn small" @click="copyText(order.customer_phone, '手机号已复制')">复制手机号</button>
@@ -513,14 +608,129 @@ window.AppTemplates = (() => {
             <div class="detail-card"><span>地址与备注</span><strong>{{ order.shipping_address }}</strong><p>{{ order.remark || '用户未填写备注' }}</p></div>
           </div>
           <div v-if="order.flow_type === 'ship_device'" class="ship-info-box">
-            <strong>寄设备信息</strong>
-            <p>品牌型号：{{ [order.device_submission.brand, order.device_submission.model].filter(Boolean).join(' / ') || '未填写' }}</p>
+            <strong>寄送设备信息</strong>
+            <p>品牌型号：{{ [order.device_submission.brand, order.device_submission.model].filter(Boolean).join(' / ') || '未填' }}</p>
             <p>设备是否可插卡：{{ insertCardText(order.device_submission.can_insert_card) }}</p>
             <p>设备是否已去控：{{ removeControlText(order.device_submission.remove_control) }}</p>
-            <p>设备情况：{{ order.device_submission.condition || '未填写' }}</p>
-            <p>寄出单号：{{ order.device_submission.outbound_tracking || '未填写' }}</p>
-            <p>补充说明：{{ order.device_submission.notes || '未填写' }}</p>
+            <p>设备情况：{{ order.device_submission.condition || '未填' }}</p>
+            <p>寄出单号：{{ order.device_submission.outbound_tracking || '未填' }}</p>
+            <p>补充说明：{{ order.device_submission.notes || '未填' }}</p>
           </div>
+          <section class="ems-panel">
+            <div class="log-head">
+              <div>
+                <strong>EMS 物流面单</strong>
+                <p class="muted-copy">自动解析地址、生成单号、获取面单、打印和同步轨迹。</p>
+              </div>
+              <div class="pill-row admin-tag-row">
+                <span class="pill">运单 {{ trackingNumber(order) || '未生成' }}</span>
+                <span class="pill">打印 {{ order.ems.print_status || '未处理' }}</span>
+              </div>
+            </div>
+            <div class="detail-grid ems-detail-grid">
+              <div class="detail-card">
+                <span>EMS 状态</span>
+                <strong>{{ order.ems.reachable_message || '待校验地址' }}</strong>
+                <p>{{ order.ems_issue_summary || order.ems.track_summary || order.ems.last_error || '建单后会在这里显示最近一条轨迹或错误信息' }}</p>
+                <p v-if="order.ems.last_serial_no" class="muted-copy">流水号：{{ order.ems.last_serial_no }}</p>
+              </div>
+              <div class="detail-card">
+                <span>面单文件</span>
+                <strong>{{ order.ems.label_file ? assetFileName(order.ems.label_file, '已生成面单') : '未生成面单' }}</strong>
+                <p>{{ order.ems.label_generated_at ? formatDateTime(order.ems.label_generated_at) : '点击获取面单后会生成 PDF 文件' }}</p>
+                <div class="copy-inline">
+                  <button v-if="order.ems.label_file" class="outline-btn small" @click="openLabelFile(order.ems.label_file)">查看面单</button>
+                  <button v-if="trackingNumber(order)" class="outline-btn small" @click="copyText(trackingNumber(order), 'EMS 单号已复制')">复制单号</button>
+                  <button v-if="order.cloud_print_download_url" class="outline-btn small" @click="setAdminTab('logistics')">去物流设置</button>
+                </div>
+              </div>
+            </div>
+            <div class="timeline-strip ems-stage-strip">
+              <div v-for="step in emsProcessTimeline(order)" :key="step.key" class="timeline-step" :class="step.state">
+                <span>{{ step.label }}</span>
+              </div>
+            </div>
+            <div class="ems-execution-board">
+              <article v-for="step in emsExecutionSteps(order)" :key="step.key" class="ems-execution-item" :class="step.status">
+                <div class="ems-execution-head">
+                  <strong>{{ step.label }}</strong>
+                  <span>{{ step.status_text }}</span>
+                </div>
+                <p>{{ step.message || '等待执行' }}</p>
+              </article>
+            </div>
+            <div class="editor-grid">
+              <input v-model.trim="order.ems.receiver.name" class="input" placeholder="收件人">
+              <input v-model.trim="order.ems.receiver.mobile" class="input" placeholder="收件手机号">
+              <input v-model.trim="order.ems.receiver.prov" class="input" placeholder="收件省">
+              <input v-model.trim="order.ems.receiver.city" class="input" placeholder="收件市">
+              <input v-model.trim="order.ems.receiver.county" class="input" placeholder="收件区县">
+              <input v-model.trim="order.ems.package_weight" class="input" placeholder="重量(g)，默认 500">
+              <input v-model.trim="order.ems.ecommerce_user_id" class="input" placeholder="电商用户 ID，可留空自动生成">
+              <input v-model.trim="order.ems.biz_product_no" class="input" placeholder="业务产品代码，如 10">
+              <input v-model.trim="order.ems.contents_attribute" class="input" placeholder="内件性质，默认 3">
+              <input v-model.trim="order.ems.label_type" class="input" placeholder="面单模板，默认 129">
+              <input v-model.trim="order.ems.receiver.post_code" class="input" placeholder="收件邮编（可选）">
+              <textarea v-model.trim="order.ems.receiver.address" class="input full-span" rows="2" placeholder="收件详细地址"></textarea>
+            </div>
+            <div class="quick-status-row ems-action-row">
+              <button class="solid-btn small" :disabled="isOrderSaving(order.id) || workflowTaskIsActive(order)" @click="queueAdminOrderWorkflow(order)">{{ emsWorkflowButtonText(order) }}</button>
+              <button class="outline-btn small" :disabled="isOrderSaving(order.id)" @click="parseAdminOrderAddress(order)">解析地址</button>
+              <button class="outline-btn small" :disabled="isOrderSaving(order.id)" @click="validateAdminOrderReachability(order)">可达校验</button>
+              <button class="solid-btn small" :disabled="isOrderSaving(order.id)" @click="createAdminOrderWaybill(order)">{{ order.ems.last_error && !order.ems.waybill_no ? '重试建单' : '创建 EMS 单' }}</button>
+              <button class="outline-btn small" :disabled="isOrderSaving(order.id)" @click="fetchAdminOrderLabel(order)">{{ order.ems.label_file ? '重新获取面单' : '获取面单' }}</button>
+              <button class="outline-btn small" :disabled="isOrderSaving(order.id)" @click="printAdminOrderLabel(order)">{{ order.ems.print_attempted_at ? '重打面单' : '打印面单' }}</button>
+              <button v-if="order.ems.label_file" class="outline-btn small" :disabled="isOrderSaving(order.id)" @click="openLabelForManualPrint(order)">打开 PDF 手动打印</button>
+              <button v-if="order.ems.print_attempted_at && !order.ems.printed_at" class="outline-btn small" :disabled="isOrderSaving(order.id)" @click="confirmAdminOrderPrinted(order)">确认已打印</button>
+              <button class="outline-btn small" :disabled="isOrderSaving(order.id)" @click="syncAdminOrderTracks(order)">{{ order.ems.last_track_sync_at ? '重新同步轨迹' : '刷新轨迹' }}</button>
+            </div>
+            <div v-if="order.ems.last_error" class="warning-strip danger-lite ems-error-strip">
+              <strong>EMS 提示</strong>
+              <p>{{ order.ems.last_error }}</p>
+            </div>
+            <div class="detail-grid ems-detail-grid">
+              <div class="detail-card">
+                <span>最后动作</span>
+                <strong>{{ order.ems.last_action || '暂无' }}</strong>
+                <p>{{ order.ems.last_action_at ? formatDateTime(order.ems.last_action_at) : '执行 EMS 动作后会记录时间' }}</p>
+              </div>
+              <div class="detail-card">
+                <span>轨迹同步</span>
+                <strong>{{ formatTrackSyncAge(order.ems.last_track_sync_at) }}</strong>
+                <p>{{ order.ems.track_summary || '同步后会显示最近一条物流摘要' }}</p>
+              </div>
+            </div>
+            <div v-if="order.ems.track_items && order.ems.track_items.length" class="track-inline-list">
+              <article v-for="track in reversedTrackItems(order)" :key="track.op_time + track.op_code + track.op_desc" class="track-inline-item">
+                <div class="track-inline-head">
+                  <strong>{{ track.op_name || track.op_desc || '物流轨迹' }}</strong>
+                  <span>{{ track.op_time }}</span>
+                </div>
+                <p>{{ track.op_desc || '暂无详情' }}</p>
+                <span class="muted-copy">{{ [track.op_org_name, track.product_name].filter(Boolean).join(' / ') }}</span>
+              </article>
+            </div>
+            <div v-if="emsAuditLogs(order).length" class="log-panel">
+              <div class="log-head">
+                <strong>EMS 接口审计</strong>
+                <span>{{ emsAuditLogs(order).length }} 条</span>
+              </div>
+              <div class="log-list">
+                <article v-for="log in emsAuditLogs(order).slice(0, 6)" :key="log.time + log.action + log.status" class="log-item">
+                  <div class="log-item-head">
+                    <strong>{{ log.action || 'ems' }} / {{ log.status === 'error' ? '失败' : '成功' }}</strong>
+                    <span>{{ formatDateTime(log.time) }}</span>
+                  </div>
+                  <p>{{ log.ret_msg || '已记录 EMS 请求与响应' }}</p>
+                  <p v-if="log.serial_no" class="muted-copy">流水号：{{ log.serial_no }}</p>
+                  <div class="copy-inline">
+                    <button v-if="log.request" class="outline-btn small" @click="copyJson(log.request, '请求 JSON 已复制')">复制请求</button>
+                    <button v-if="log.response" class="outline-btn small" @click="copyJson(log.response, '响应 JSON 已复制')">复制响应</button>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </section>
           <div class="editor-grid">
             <select v-model="order.status" class="input">
               <option v-for="status in orderStatuses" :key="status" :value="status">{{ orderStatusText(status) }}</option>
@@ -561,6 +771,122 @@ window.AppTemplates = (() => {
       <div v-else class="empty-box">当前没有符合条件的订单。</div>
     </section>
 
+    <section v-if="adminTab === 'logistics'" class="admin-panel">
+      <div class="section-head">
+        <div>
+          <h2>物流设置</h2>
+          <p class="section-desc">这里维护 EMS 凭据、默认寄件信息、业务参数、纸张设置和本地打印参数；后台保存值优先，留空时回退服务器环境变量。</p>
+        </div>
+        <div class="hero-actions">
+          <button class="outline-btn" :disabled="savingStates.diagnostics" @click="runEmsDiagnostics">{{ savingStates.diagnostics ? '检测中...' : '运行自检' }}</button>
+          <button class="solid-btn" :disabled="savingStates.settings || !isAdminSettingsDirty" @click="saveSettings">{{ savingStates.settings ? '保存中...' : '保存物流设置' }}</button>
+        </div>
+      </div>
+      <div class="admin-form-grid">
+        <input v-model.trim="adminSettingsForm.logistics.sender_no" class="input" placeholder="EMS 协议客户号">
+        <div class="password-field">
+          <input v-model.trim="adminSettingsForm.logistics.authorization" :type="secretInputType('logistics_authorization')" class="input" placeholder="EMS 授权码">
+          <button type="button" class="password-toggle-btn" @click="toggleSecretField('logistics_authorization')">{{ isSecretFieldVisible('logistics_authorization') ? '隐藏' : '显示' }}</button>
+        </div>
+        <div class="password-field">
+          <input v-model.trim="adminSettingsForm.logistics.sign_key" :type="secretInputType('logistics_sign_key')" class="input" placeholder="EMS 签名钥匙 Base64">
+          <button type="button" class="password-toggle-btn" @click="toggleSecretField('logistics_sign_key')">{{ isSecretFieldVisible('logistics_sign_key') ? '隐藏' : '显示' }}</button>
+        </div>
+        <div class="warning-strip full-span">
+          <strong>凭据优先级</strong>
+          <p>这里填写的客户号 / 授权码 / 签名钥匙会优先使用；对应字段留空时，系统自动回退到服务器环境变量。</p>
+        </div>
+        <input v-model.trim="adminSettingsForm.logistics.sender_name" class="input" placeholder="寄件人姓名">
+        <input v-model.trim="adminSettingsForm.logistics.sender_phone" class="input" placeholder="寄件人手机号">
+        <input v-model.trim="adminSettingsForm.logistics.sender_post_code" class="input" placeholder="寄件邮编（可选）">
+        <input v-model.trim="adminSettingsForm.logistics.preferred_printer" class="input" placeholder="默认打印机名称">
+        <input v-model.trim="adminSettingsForm.logistics.sender_prov" class="input" placeholder="寄件省">
+        <input v-model.trim="adminSettingsForm.logistics.sender_city" class="input" placeholder="寄件市">
+        <input v-model.trim="adminSettingsForm.logistics.sender_county" class="input" placeholder="寄件区县">
+        <select v-model="adminSettingsForm.logistics.preferred_print_mode" class="input">
+          <option value="auto">自动优先静默打印</option>
+          <option value="sumatra">仅 SumatraPDF</option>
+          <option value="powershell">仅 PowerShell</option>
+          <option value="open">打开文件手动打印</option>
+          <option value="browser">浏览器打印</option>
+        </select>
+        <textarea v-model.trim="adminSettingsForm.logistics.sender_address" class="input full-span" rows="2" placeholder="寄件详细地址"></textarea>
+        <input v-model.trim="adminSettingsForm.logistics.biz_product_no" class="input" placeholder="默认业务产品代码">
+        <input v-model.trim="adminSettingsForm.logistics.biz_product_id" class="input" placeholder="默认业务产品 ID（可选）">
+        <input v-model.trim="adminSettingsForm.logistics.contents_attribute" class="input" placeholder="默认内件性质">
+        <input v-model.trim="adminSettingsForm.logistics.default_weight_grams" class="input" placeholder="默认重量(g)">
+        <input v-model.trim="adminSettingsForm.logistics.label_type" class="input" placeholder="默认面单模板">
+        <input v-model.trim="adminSettingsForm.logistics.sumatra_path" class="input full-span" placeholder="SumatraPDF.exe 本地完整路径，可留空自动探测">
+        <input v-model.trim="adminSettingsForm.logistics.paper_name" class="input" placeholder="期望纸张名称，如 100x180mm">
+        <input v-model.trim="adminSettingsForm.logistics.paper_width_mm" class="input" placeholder="纸张宽(mm)">
+        <input v-model.trim="adminSettingsForm.logistics.paper_height_mm" class="input" placeholder="纸张高(mm)">
+        <input v-model.number="adminSettingsForm.logistics.track_auto_sync_interval_hours" type="number" min="1" class="input" placeholder="轨迹自动同步间隔(小时)">
+        <input v-model.number="adminSettingsForm.logistics.track_stale_hours" type="number" min="1" class="input" placeholder="轨迹多久视为待同步">
+        <label class="switch-line full-span"><input type="checkbox" v-model="adminSettingsForm.logistics.auto_sync_tracks"><span>开启 EMS 轨迹后台自动同步</span></label>
+        <p class="muted-copy full-span">开启后，服务端会按上面的间隔自动同步已出单订单的 EMS 轨迹，用户端订单页会更快看到最新状态。</p>
+      </div>
+      <section class="account-panel">
+        <div class="section-head compact-head">
+          <div>
+            <h3>打印与环境自检</h3>
+            <p class="section-desc">用于快速确认 EMS 凭证、默认打印机、SumatraPDF、C-Lodop、纸张配置以及打印前拦截项是否正常。</p>
+          </div>
+        </div>
+        <div v-if="adminEmsDiagnostics" class="detail-grid">
+          <div class="detail-card">
+            <span>凭证状态</span>
+            <strong>{{ adminEmsDiagnostics.credentials.sender_no_configured && adminEmsDiagnostics.credentials.authorization_configured && adminEmsDiagnostics.credentials.sign_key_configured ? '已配置' : '未完整配置' }}</strong>
+            <p>优先读取当前物流设置，留空时自动回退到服务器环境变量。</p>
+          </div>
+          <div class="detail-card">
+            <span>打印模式</span>
+            <strong>{{ adminEmsDiagnostics.runtime.print_mode || '未设置' }}</strong>
+            <p>{{ adminEmsDiagnostics.runtime.printer_name || '未设置默认打印机' }}</p>
+          </div>
+          <div class="detail-card">
+            <span>SumatraPDF</span>
+            <strong>{{ adminEmsDiagnostics.diagnostics.sumatra.available ? '已检测到' : '未检测到' }}</strong>
+            <p>{{ adminEmsDiagnostics.diagnostics.sumatra.path || '可在上方填写本地程序路径' }}</p>
+          </div>
+          <div class="detail-card">
+            <span>C-Lodop</span>
+            <strong>{{ adminEmsDiagnostics.diagnostics.cloudPrint.reachable ? '本机服务可达' : '未连接' }}</strong>
+            <p>{{ adminEmsDiagnostics.diagnostics.cloudPrint.url || '如需检测，可先安装官方云打印控件' }}</p>
+          </div>
+          <div class="detail-card">
+            <span>纸张期望</span>
+            <strong>{{ adminEmsDiagnostics.runtime.paper_name || '未设置' }}</strong>
+            <p>{{ adminEmsDiagnostics.runtime.paper_width_mm }} x {{ adminEmsDiagnostics.runtime.paper_height_mm }} mm / {{ adminEmsDiagnostics.diagnostics.paper?.match === true ? '已匹配' : (adminEmsDiagnostics.diagnostics.paper?.match === false ? '未匹配' : '待确认') }}</p>
+          </div>
+          <div class="detail-card">
+            <span>检测到的打印机</span>
+            <strong>{{ adminEmsDiagnostics.diagnostics.matchedPrinter ? adminEmsDiagnostics.diagnostics.matchedPrinter.name : '未匹配默认打印机' }}</strong>
+            <p>{{ adminEmsDiagnostics.diagnostics.printerConfiguration?.paperSize || '未读取到纸张配置' }}</p>
+          </div>
+          <div class="detail-card">
+            <span>打印预检</span>
+            <strong>{{ adminEmsDiagnostics.diagnostics.preflight?.ok ? '通过' : '需处理' }}</strong>
+            <p>{{ adminEmsDiagnostics.diagnostics.preflight?.ok ? '当前配置可以继续打印。' : '存在会拦截自动打印的问题，请先处理后再发起打印。' }}</p>
+          </div>
+        </div>
+        <div v-if="adminEmsDiagnostics && adminEmsDiagnostics.diagnostics.printers && adminEmsDiagnostics.diagnostics.printers.length" class="inline-badges">
+          <span v-for="printer in adminEmsDiagnostics.diagnostics.printers" :key="printer.name">{{ printer.name }} / {{ printer.driverName || '未知驱动' }}</span>
+        </div>
+        <div v-if="adminEmsDiagnostics && adminEmsDiagnostics.diagnostics.preflight && !adminEmsDiagnostics.diagnostics.preflight.ok" class="warning-strip danger-lite">
+          <strong>打印拦截项</strong>
+          <p v-for="reason in adminEmsDiagnostics.diagnostics.preflight.blockingReasons" :key="reason">{{ reason }}</p>
+        </div>
+        <div v-if="adminEmsDiagnostics && adminEmsDiagnostics.diagnostics.warnings && adminEmsDiagnostics.diagnostics.warnings.length" class="warning-strip danger-lite">
+          <strong>自检提示</strong>
+          <p v-for="warning in adminEmsDiagnostics.diagnostics.warnings" :key="warning">{{ warning }}</p>
+        </div>
+        <div class="copy-inline">
+          <button v-if="adminEmsDiagnostics?.cloud_print_download_url" class="outline-btn small" @click="openLabelFile(adminEmsDiagnostics.cloud_print_download_url)">下载官方云打印控件</button>
+          <button v-if="adminEmsDiagnostics?.diagnostics" class="outline-btn small" @click="copyJson(adminEmsDiagnostics.diagnostics, '诊断结果已复制')">复制诊断 JSON</button>
+        </div>
+      </section>
+    </section>
+
     <section v-if="adminTab === 'settings'" class="admin-panel">
       <div class="section-head">
         <div>
@@ -587,12 +913,12 @@ window.AppTemplates = (() => {
         <textarea v-model.trim="adminSettingsForm.aftersales_notice" class="input full-span" rows="3" placeholder="售后说明"></textarea>
         <textarea v-model.trim="adminSettingsForm.delivery_notice" class="input full-span" rows="3" placeholder="发货时效说明"></textarea>
         <textarea v-model.trim="adminSettingsForm.region_notice" class="input full-span" rows="3" placeholder="地区限制/使用说明"></textarea>
-        <textarea v-model.trim="adminSettingsForm.buy_flow_steps_text" class="input full-span" rows="4" placeholder="购买设备配卡流程，一行一步"></textarea>
-        <textarea v-model.trim="adminSettingsForm.ship_flow_steps_text" class="input full-span" rows="4" placeholder="寄设备配卡流程，一行一步"></textarea>
+        <textarea v-model.trim="adminSettingsForm.buy_flow_steps_text" class="input full-span" rows="4" placeholder="购买设备配卡流程，一行一条"></textarea>
+        <textarea v-model.trim="adminSettingsForm.ship_flow_steps_text" class="input full-span" rows="4" placeholder="寄设备配卡流程，一行一条"></textarea>
         <textarea v-model.trim="adminSettingsForm.ship_checklist_text" class="input full-span" rows="4" placeholder="寄设备检查清单，一行一条"></textarea>
         <textarea v-model.trim="adminSettingsForm.purchase_rules_text" class="input full-span" rows="4" placeholder="购买须知，一行一条"></textarea>
         <textarea v-model.trim="adminSettingsForm.faq_items_text" class="input full-span" rows="5" placeholder="常见问题，一行一条，格式：问题|答案"></textarea>
-        <textarea v-model.trim="adminSettingsForm.admin_note_templates_text" class="input full-span" rows="4" placeholder="后台备注模板，一行一个"></textarea>
+        <textarea v-model.trim="adminSettingsForm.admin_note_templates_text" class="input full-span" rows="4" placeholder="后台备注模板，一行一条"></textarea>
         <input v-model.trim="adminSettingsForm.share_title" class="input" placeholder="分享标题">
         <input v-model.trim="adminSettingsForm.share_description" class="input" placeholder="分享描述">
       </div>
@@ -643,9 +969,18 @@ window.AppTemplates = (() => {
         </div>
         <div class="admin-form-grid">
           <input v-model.trim="adminAccountForm.username" class="input" placeholder="管理员账号">
-          <input v-model.trim="adminAccountForm.current_password" type="password" class="input" placeholder="当前密码">
-          <input v-model.trim="adminAccountForm.new_password" type="password" class="input" placeholder="新密码，不修改可留空">
-          <input v-model.trim="adminAccountForm.confirm_password" type="password" class="input" placeholder="确认新密码">
+          <div class="password-field">
+            <input v-model.trim="adminAccountForm.current_password" :type="secretInputType('admin_account_current_password')" class="input" placeholder="当前密码">
+            <button type="button" class="password-toggle-btn" @click="toggleSecretField('admin_account_current_password')">{{ isSecretFieldVisible('admin_account_current_password') ? '隐藏' : '显示' }}</button>
+          </div>
+          <div class="password-field">
+            <input v-model.trim="adminAccountForm.new_password" :type="secretInputType('admin_account_new_password')" class="input" placeholder="新密码，不修改可留空">
+            <button type="button" class="password-toggle-btn" @click="toggleSecretField('admin_account_new_password')">{{ isSecretFieldVisible('admin_account_new_password') ? '隐藏' : '显示' }}</button>
+          </div>
+          <div class="password-field">
+            <input v-model.trim="adminAccountForm.confirm_password" :type="secretInputType('admin_account_confirm_password')" class="input" placeholder="确认新密码">
+            <button type="button" class="password-toggle-btn" @click="toggleSecretField('admin_account_confirm_password')">{{ isSecretFieldVisible('admin_account_confirm_password') ? '隐藏' : '显示' }}</button>
+          </div>
         </div>
         <div class="card-actions">
           <button class="solid-btn" :disabled="savingStates.account || !isAdminAccountDirty" @click="saveAdminAccount">{{ savingStates.account ? '保存中...' : '保存账号安全设置' }}</button>
@@ -685,7 +1020,10 @@ window.AppTemplates = (() => {
     <div class="modal-body">
       <template v-if="isAdminEntry">
         <input v-model.trim="adminUsername" class="input" placeholder="请输入管理员账号" @keyup.enter="login">
-        <input v-model.trim="adminPassword" type="password" class="input" placeholder="请输入管理员密码" @keyup.enter="login">
+        <div class="password-field">
+          <input v-model.trim="adminPassword" :type="secretInputType('admin_login_password')" class="input" placeholder="请输入管理员密码" @keyup.enter="login">
+          <button type="button" class="password-toggle-btn" @click="toggleSecretField('admin_login_password')">{{ isSecretFieldVisible('admin_login_password') ? '隐藏' : '显示' }}</button>
+        </div>
       </template>
       <input v-else v-model.trim="loginPhone" maxlength="11" class="input" placeholder="请输入 11 位手机号" @keyup.enter="login">
       <button class="solid-btn wide-btn" :disabled="savingStates.login" @click="login">{{ savingStates.login ? '登录中...' : '立即登录' }}</button>
@@ -716,7 +1054,7 @@ window.AppTemplates = (() => {
         </div>
 
         <section v-if="builderForm.flow_type === 'ship_device'" class="builder-section">
-          <div class="builder-title"><h4>1. 选择套餐</h4><span>必选</span></div>
+          <div class="builder-title"><h4>1. 选择套餐</h4><span>必填</span></div>
           <div class="builder-choice-grid">
             <button v-for="plan in plans" :key="plan.id" class="choice-card" :class="{ selected: builderForm.plan_id === plan.id }" @click="builderForm.plan_id = plan.id">
               <div class="choice-media"><img :src="planImage(plan)" :alt="plan.name"></div>
@@ -727,7 +1065,7 @@ window.AppTemplates = (() => {
           </div>
         </section>
         <section v-if="builderForm.flow_type === 'buy_device'" class="builder-section">
-          <div class="builder-title"><h4>1. 先选择设备</h4><span>必选</span></div>
+          <div class="builder-title"><h4>1. 先选择设备</h4><span>必填</span></div>
           <div class="builder-choice-grid">
             <button v-for="device in devices" :key="device.id" class="choice-card" :class="{ selected: builderForm.device_id === device.id }" @click="chooseDevice(device.id)" :disabled="device.stock <= 0">
               <div class="choice-media"><img :src="deviceImage(device)" :alt="device.name"></div>
@@ -882,6 +1220,35 @@ window.AppTemplates = (() => {
       <button class="icon-btn" @click="showOrdersModal = false">×</button>
     </div>
     <div class="modal-body">
+      <div v-if="myOrderReminderCenterItems.length" class="user-notice-banner">
+        <div>
+          <span>订单提醒</span>
+          <strong>{{ myOrdersUnreadNoticeCount }} 条未读提醒</strong>
+          <p>{{ myOrderReminderSummary.orderCount }} 个订单有未读消息，页面打开时会每 60 秒自动刷新一次。</p>
+        </div>
+        <div class="contact-actions">
+          <button class="solid-btn small" :disabled="!myOrdersUnreadNoticeCount" @click="markAllMyOrdersNoticesRead">全部标记已读</button>
+          <button class="outline-btn small" @click="fetchMyOrders(true, { suppressNoticeToast: true })">立即刷新</button>
+        </div>
+      </div>
+      <section v-if="myOrderReminderCenterItems.length" class="user-reminder-center">
+        <div class="section-head compact-head">
+          <div>
+            <h3>提醒中心</h3>
+            <p class="muted-copy">{{ myOrderReminderSummary.latestTime ? '最新提醒：' + formatDateTime(myOrderReminderSummary.latestTime) : '会集中展示订单物流提醒历史' }}</p>
+          </div>
+        </div>
+        <div class="user-reminder-center-list">
+          <article v-for="item in myOrderReminderCenterItems" :key="item.id" class="user-reminder-item" :class="[item.level, { unread: !item.read_at }]">
+            <div class="user-reminder-item-head">
+              <strong>{{ item.title }}</strong>
+              <span>{{ formatDateTime(item.created_at) }}</span>
+            </div>
+            <p>{{ item.order_no }} / {{ item.message }}</p>
+            <span class="muted-copy">{{ item.read_at ? '已读时间：' + formatDateTime(item.read_at) : '未读提醒' }}</span>
+          </article>
+        </div>
+      </section>
       <div v-if="myOrders.length" class="order-list">
         <article v-for="order in myOrders" :key="order.id" class="order-card">
           <div class="order-topline">
@@ -889,6 +1256,7 @@ window.AppTemplates = (() => {
               <div class="copy-inline">
                 <strong>{{ order.order_no }}</strong>
                 <button class="outline-btn small" @click="copyText(order.order_no, '订单号已复制')">复制订单号</button>
+                <span v-if="userOrderUnreadNoticeCount(order)" class="notice-pill unread">未读 {{ userOrderUnreadNoticeCount(order) }}</span>
               </div>
               <p class="muted-copy">{{ formatDateTime(order.created_at) }} / {{ flowTypeText(order.flow_type) }}</p>
             </div>
@@ -899,16 +1267,56 @@ window.AppTemplates = (() => {
               <span>{{ step.label }}</span>
             </div>
           </div>
+          <div v-if="userOrderNoticeItems(order).length" class="user-order-notice-grid">
+            <article v-for="notice in userOrderNoticeItems(order)" :key="notice.key" class="user-order-notice" :class="[notice.level, { unread: !notice.read_at }]">
+              <div class="user-order-notice-head">
+                <strong>{{ notice.title }}</strong>
+                <span>{{ notice.time ? formatDateTime(notice.time) : '刚刚' }}</span>
+              </div>
+              <p>{{ notice.message }}</p>
+              <span class="muted-copy">{{ notice.read_at ? '已读时间：' + formatDateTime(notice.read_at) : '未读提醒' }}</span>
+            </article>
+          </div>
+          <div v-if="userOrderNoticeHistory(order).length" class="card-actions compact-actions">
+            <span class="muted-copy">提醒历史 {{ userOrderNoticeHistory(order).length }} 条 / {{ userOrderLastReadAt(order) ? '最后已读：' + formatDateTime(userOrderLastReadAt(order)) : '尚未标记已读' }}</span>
+            <button v-if="userOrderUnreadNoticeCount(order)" class="outline-btn small" @click="markMyOrderNoticesRead(order)">标记本单已读</button>
+          </div>
           <div class="detail-grid">
             <div class="detail-card"><span>订单内容</span><strong>{{ order.summary_text }}</strong><p>总金额 {{ currency(order.total_amount) }}</p></div>
             <div class="detail-card"><span>收货 / 回寄地址</span><strong>{{ order.shipping_address }}</strong><p>{{ order.remark || '无备注' }}</p></div>
             <div class="detail-card"><span>付款方式</span><strong>{{ paymentText(order.payment_method) }}</strong><button v-if="order.payment_proof" class="outline-btn small" @click="previewImage(order.payment_proof)">查看付款截图</button></div>
             <div class="detail-card">
               <span>商家回寄</span>
-              <strong>{{ order.logistics_company || '待填写' }}</strong>
-              <p>{{ order.merchant_tracking_number || '暂未出单号' }}</p>
-              <button v-if="order.merchant_tracking_number" class="outline-btn small" @click="copyText(order.merchant_tracking_number, '快递单号已复制')">复制快递单号</button>
+              <strong>{{ trackingCompany(order) }}</strong>
+              <p>{{ trackingNumber(order) || '暂未出单' }}</p>
+              <p v-if="order.ems.track_summary" class="muted-copy">{{ order.ems.track_summary }}</p>
+              <div class="copy-inline">
+                <button v-if="trackingNumber(order)" class="outline-btn small" @click="copyText(trackingNumber(order), '快递单号已复制')">复制快递单号</button>
+                <button v-if="trackingNumber(order)" class="outline-btn small" @click="refreshMyOrderTracks(order)">刷新轨迹</button>
+              </div>
             </div>
+          </div>
+          <div class="address-card user-logistics-panel">
+            <div>
+              <span>物流进度</span>
+              <strong>{{ userTrackPanelTitle(order) }}</strong>
+              <p>{{ userTrackPanelHint(order) }}</p>
+              <p class="muted-copy">最近同步：{{ formatTrackSyncAge(order.ems.last_track_sync_at) }}</p>
+            </div>
+            <div class="contact-actions">
+              <button v-if="trackingNumber(order)" class="outline-btn small" @click="copyText(trackingNumber(order), 'EMS 单号已复制')">复制 EMS 单号</button>
+              <button v-if="trackingNumber(order)" class="outline-btn small" @click="refreshMyOrderTracks(order)">立即刷新</button>
+            </div>
+          </div>
+          <div v-if="order.ems.track_items && order.ems.track_items.length" class="track-inline-list user-track-list">
+            <article v-for="track in reversedTrackItems(order)" :key="track.op_time + track.op_code + track.op_desc" class="track-inline-item">
+              <div class="track-inline-head">
+                <strong>{{ track.op_name || track.op_desc || '物流轨迹' }}</strong>
+                <span>{{ track.op_time }}</span>
+              </div>
+              <p>{{ track.op_desc || '暂无详情' }}</p>
+              <span class="muted-copy">{{ [track.op_org_name, track.product_name].filter(Boolean).join(' / ') }}</span>
+            </article>
           </div>
           <div v-if="allowPaymentProofRefresh(order)" class="reupload-proof">
             <label class="upload-field" :class="{ 'has-file': orderProofFiles[order.id] }">
@@ -970,7 +1378,7 @@ window.AppTemplates = (() => {
           <input v-model.trim="planEditorForm.monthly_data" class="input" placeholder="套餐流量">
           <input v-model.number="planEditorForm.monthly_price" type="number" min="0" class="input" placeholder="月费参考价">
           <input v-model.number="planEditorForm.setup_price" type="number" min="0" class="input" placeholder="配卡费">
-          <input v-model.number="planEditorForm.hot_rank" type="number" min="0" class="input" placeholder="热销排序值">
+          <input v-model.number="planEditorForm.hot_rank" type="number" min="0" class="input" placeholder="热销排序">
           <input v-model.number="planEditorForm.sort_order" type="number" min="1" class="input" placeholder="排序">
           <input v-model.trim="planEditorForm.best_for" class="input full-span" placeholder="适用场景">
           <input v-model.trim="planEditorForm.coverage" class="input full-span" placeholder="覆盖说明">
@@ -1025,7 +1433,7 @@ window.AppTemplates = (() => {
           <input v-model.number="deviceEditorForm.price" type="number" min="0" class="input" placeholder="销售价">
           <input v-model.number="deviceEditorForm.original_price" type="number" min="0" class="input" placeholder="划线价">
           <input v-model.number="deviceEditorForm.stock" type="number" min="0" class="input" placeholder="库存">
-          <input v-model.number="deviceEditorForm.hot_rank" type="number" min="0" class="input" placeholder="热销排序值">
+          <input v-model.number="deviceEditorForm.hot_rank" type="number" min="0" class="input" placeholder="热销排序">
           <input v-model.number="deviceEditorForm.sort_order" type="number" min="1" class="input" placeholder="排序">
           <input v-model.trim="deviceEditorForm.badge" class="input" placeholder="角标文案">
           <input v-model.trim="deviceEditorForm.short_description" class="input full-span" placeholder="简短介绍">
@@ -1034,7 +1442,7 @@ window.AppTemplates = (() => {
           <div class="compatibility-editor full-span">
             <div class="builder-title compact-title">
               <h4>可配套餐限制</h4>
-              <span>不勾选表示全部可配</span>
+              <span>不勾选表示全部可用</span>
             </div>
             <div class="compatibility-grid">
               <label v-for="plan in adminPlans" :key="plan.id" class="compatibility-item">

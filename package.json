@@ -5,6 +5,7 @@
     "main": "app.js",
     "scripts": {
         "start": "node app.js",
+        "ems:diagnose": "node scripts/ems-diagnose.js",
         "test": "node --test tests/**/*.test.js",
         "lint": "eslint .",
         "format": "prettier --write .",

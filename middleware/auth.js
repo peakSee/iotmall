@@ -1,5 +1,4 @@
-const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = require('../utils/auth');
+const { verifyAuthToken } = require('../utils/auth');
 
 module.exports = (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -8,7 +7,7 @@ module.exports = (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = verifyAuthToken(token);
         req.userId = decoded.userId;
         req.userRole = decoded.role;
         next();

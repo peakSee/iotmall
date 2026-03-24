@@ -6,9 +6,9 @@
   "service_phone": "400-8822-668",
   "service_wechat": "jinglian-iot",
   "business_hours": "周一到周日 09:00 - 22:00",
-  "shop_receiving_name": "鲸联配卡仓",
+  "shop_receiving_name": "一起山顶见",
   "shop_receiving_phone": "17724888898",
-  "shop_receiving_address": "广东省深圳市龙岗区坂田街道云里智能园 3 栋 8 楼 鲸联配卡仓",
+  "shop_receiving_address": "河南省新乡市原阳县福宁集镇张大夫寨村",
   "announcement": "全站采用人工审核收款。下单后请先扫码付款，再上传付款截图，审核通过后开始处理订单。",
   "payment_notice": "暂不接微信和支付宝官方支付接口，请根据页面展示的收款码扫码付款，并上传清晰付款截图。",
   "shipping_notice": "寄设备配卡请补全设备品牌、型号、当前情况、寄出单号和回寄地址，方便我们快速收件、配卡与测试。",
@@ -31,7 +31,7 @@
   ],
   "ship_checklist": [
     "寄出前确认设备可开机、可识别 SIM 卡槽",
-    "设备卡槽需要打胶，由我们到件后统一处理",
+    "设备卡槽如需打胶，由我们到件后统一处理",
     "建议在订单里写明设备品牌、型号和当前联网情况",
     "寄出后及时填写寄出单号，方便仓库收件",
     "如设备依赖电源、天线或特殊配件，请一并寄出"
@@ -40,7 +40,7 @@
     "物联卡不单独售卖，只提供设备配卡或寄设备配卡服务",
     "套餐价格、流量、地区限制、限速说明都以套餐图片内容为准",
     "付款后必须上传清晰付款截图，未上传的订单不会进入人工审核",
-    "如遇设备兼容、地区限制或特殊情况，会由客服微信与你确认处理"
+    "如遇设备兼容、地区限制或特殊情况，会由客服微信与你确认处理方案"
   ],
   "faq_items": [
     "套餐是单独卖卡吗？|不是，本站只做设备配卡和寄设备配卡服务。",
@@ -54,5 +54,27 @@
   "payment_qrs": {
     "wechat": "/uploads/payqr_1774275266697.png.tmp.png",
     "alipay": "/uploads/payqr_1774275266699.png.tmp.png"
+  },
+  "logistics": {
+    "sender_name": "一起山顶见",
+    "sender_phone": "17724888898",
+    "sender_post_code": "",
+    "sender_prov": "河南省",
+    "sender_city": "新乡市",
+    "sender_county": "原阳县",
+    "sender_address": "福宁集镇张大夫寨村",
+    "biz_product_no": "10",
+    "biz_product_id": "",
+    "contents_attribute": "3",
+    "default_weight_grams": "500",
+    "label_type": "129",
+    "preferred_print_mode": "auto",
+    "preferred_printer": "HPRT N31BT",
+    "sumatra_path": "",
+    "paper_name": "100x180mm",
+    "paper_width_mm": "100",
+    "paper_height_mm": "180",
+    "auto_sync_tracks": true,
+    "track_stale_hours": 24
   }
 }

@@ -3,7 +3,7 @@ const globals = require('globals');
 
 module.exports = [
     {
-        ignores: ['node_modules/**', 'uploads/**', 'data/**', '设备图片/**'],
+        ignores: ['node_modules/**', 'uploads/**', 'data/**', '设备图片/**', 'tmp_*'],
     },
     js.configs.recommended,
     {
@@ -22,7 +22,7 @@ module.exports = [
         },
     },
     {
-        files: ['app.js', 'routes/**/*.js', 'middleware/**/*.js', 'utils/**/*.js', 'tests/**/*.js', 'eslint.config.js'],
+        files: ['app.js', 'routes/**/*.js', 'middleware/**/*.js', 'utils/**/*.js', 'scripts/**/*.js', 'tests/**/*.js', 'eslint.config.js'],
         languageOptions: {
             ecmaVersion: 2022,
             sourceType: 'commonjs',

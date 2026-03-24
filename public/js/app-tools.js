@@ -1,5 +1,7 @@
 window.AppTools = (() => {
     const api = axios.create({ baseURL: '/api' });
+    const CLOUD_PRINT_SCRIPT_URLS = ['http://localhost:8000/CLodopfuncs.js?priority=1', 'http://127.0.0.1:8000/CLodopfuncs.js?priority=1'];
+    let cloudPrintLoader = null;
 
     api.interceptors.request.use((config) => {
         const token = localStorage.getItem('token');
@@ -40,6 +42,71 @@ window.AppTools = (() => {
 
         return query ? `${encoded}?${query}` : encoded;
     };
+    const absoluteUrl = (value) => {
+        const text = encodePath(value);
+        if (!text) return '';
+        if (/^https?:\/\//i.test(text)) return text;
+        return new URL(text, window.location.origin).toString();
+    };
+    const loadCloudPrintScript = async () => {
+        if (typeof window.getCLodop === 'function') {
+            return window.getCLodop();
+        }
+
+        if (!cloudPrintLoader) {
+            cloudPrintLoader = new Promise((resolve, reject) => {
+                let settled = false;
+
+                const finish = () => {
+                    if (settled || typeof window.getCLodop !== 'function') return;
+                    settled = true;
+                    resolve(window.getCLodop());
+                };
+
+                const fail = (message) => {
+                    if (settled) return;
+                    settled = true;
+                    cloudPrintLoader = null;
+                    reject(new Error(message));
+                };
+
+                CLOUD_PRINT_SCRIPT_URLS.forEach((scriptUrl) => {
+                    const script = document.createElement('script');
+                    script.src = scriptUrl;
+                    script.async = true;
+                    script.onload = finish;
+                    script.onerror = () => {};
+                    document.head.appendChild(script);
+                });
+
+                window.setTimeout(finish, 1500);
+                window.setTimeout(() => {
+                    fail('未连接到本机 C-Lodop 服务，请先安装并启动 EMS 云打印控件。');
+                }, 4000);
+            });
+        }
+
+        return cloudPrintLoader;
+    };
+    const getCloudPrinterNames = (lodop) => {
+        const printerCount = Number(lodop?.GET_PRINTER_COUNT?.() || 0);
+        return Array.from({ length: printerCount }, (_, index) => String(lodop.GET_PRINTER_NAME(index) || '').trim()).filter(Boolean);
+    };
+    const inspectCloudPrint = async () => {
+        const lodop = await loadCloudPrintScript();
+        return {
+            reachable: true,
+            printers: getCloudPrinterNames(lodop),
+        };
+    };
+    const printPdfViaCloud = async ({ pdfUrl, printerName = '', taskName = 'EMS面单打印' } = {}) => {
+        const nextUrl = absoluteUrl(pdfUrl);
+        const state = await inspectCloudPrint();
+        const detectedPrinter = state.printers.find((name) => name === printerName) || state.printers[0] || '';
+        throw new Error(
+            `当前免费 C-Lodop 方案不支持直接打印 PDF 面单，请改用后台本地打印。检测到打印机：${detectedPrinter || '未找到'}，任务：${taskName}，文件：${nextUrl || '未提供'}`,
+        );
+    };
 
     const placeholder = (label, colorA = '#0E6D68', colorB = '#F28C28') =>
         `data:image/svg+xml;utf8,${encodeURIComponent(`
@@ -60,5 +127,17 @@ window.AppTools = (() => {
 </svg>
 `)}`;
 
-    return { api, money, linesToText, textToLines, encodePath, placeholder };
+    return {
+        absoluteUrl,
+        api,
+        encodePath,
+        getCloudPrinterNames,
+        inspectCloudPrint,
+        linesToText,
+        loadCloudPrintScript,
+        money,
+        placeholder,
+        printPdfViaCloud,
+        textToLines,
+    };
 })();

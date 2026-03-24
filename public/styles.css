@@ -894,6 +894,18 @@ p {
     flex: 1 1 220px;
 }
 
+.batch-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(14, 109, 104, 0.12);
+    background: rgba(255, 255, 255, 0.78);
+}
+
 .dashboard-grid {
     align-items: stretch;
 }
@@ -947,6 +959,10 @@ p {
     margin-top: 14px;
 }
 
+.ems-stage-strip {
+    margin-top: 0;
+}
+
 .timeline-step {
     position: relative;
     flex: 1 1 92px;
@@ -998,6 +1014,261 @@ p {
     border: 1px solid rgba(239, 143, 54, 0.2);
 }
 
+.ems-panel {
+    display: grid;
+    gap: 14px;
+    margin-top: 14px;
+    padding: 16px;
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(14, 109, 104, 0.08), rgba(255, 255, 255, 0.96));
+    border: 1px solid rgba(14, 109, 104, 0.16);
+}
+
+.ems-detail-grid {
+    margin-top: 0;
+}
+
+.ems-action-row {
+    margin-top: 0;
+}
+
+.ems-error-strip {
+    margin-top: 0;
+}
+
+.ems-execution-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+}
+
+.ems-execution-item {
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(25, 34, 45, 0.08);
+    background: rgba(255, 255, 255, 0.86);
+}
+
+.ems-execution-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.ems-execution-head span {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.ems-execution-item p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--muted);
+}
+
+.ems-execution-item.success {
+    border-color: rgba(14, 109, 104, 0.22);
+    background: linear-gradient(180deg, rgba(236, 252, 248, 0.98), rgba(255, 255, 255, 0.92));
+}
+
+.ems-execution-item.running,
+.ems-execution-item.pending {
+    border-color: rgba(239, 143, 54, 0.28);
+    background: linear-gradient(180deg, rgba(255, 246, 232, 0.98), rgba(255, 255, 255, 0.92));
+}
+
+.ems-execution-item.error {
+    border-color: rgba(209, 70, 79, 0.22);
+    background: linear-gradient(180deg, rgba(255, 241, 242, 0.98), rgba(255, 255, 255, 0.92));
+}
+
+.ems-execution-item.skipped {
+    border-style: dashed;
+    background: rgba(248, 245, 239, 0.92);
+}
+
+.user-notice-banner {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 16px 18px;
+    border-radius: 20px;
+    border: 1px solid rgba(14, 109, 104, 0.18);
+    background: linear-gradient(135deg, rgba(233, 249, 246, 0.98), rgba(255, 247, 236, 0.96));
+}
+
+.user-notice-banner span {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.user-notice-banner p {
+    margin-top: 6px;
+    color: var(--muted);
+}
+
+.user-reminder-center {
+    margin-bottom: 16px;
+    padding: 18px;
+    border-radius: 24px;
+    border: 1px solid rgba(25, 34, 45, 0.08);
+    background: rgba(255, 255, 255, 0.76);
+}
+
+.user-reminder-center-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+}
+
+.user-reminder-item {
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(25, 34, 45, 0.08);
+    background: rgba(255, 255, 255, 0.92);
+}
+
+.user-reminder-item.info {
+    border-color: rgba(14, 109, 104, 0.18);
+    background: linear-gradient(180deg, rgba(238, 251, 248, 0.98), rgba(255, 255, 255, 0.94));
+}
+
+.user-reminder-item.success {
+    border-color: rgba(24, 138, 96, 0.2);
+    background: linear-gradient(180deg, rgba(238, 252, 245, 0.98), rgba(255, 255, 255, 0.94));
+}
+
+.user-reminder-item.warm,
+.user-reminder-item.accent {
+    border-color: rgba(239, 143, 54, 0.22);
+    background: linear-gradient(180deg, rgba(255, 246, 232, 0.98), rgba(255, 255, 255, 0.94));
+}
+
+.user-reminder-item.unread,
+.user-order-notice.unread {
+    box-shadow: inset 0 0 0 1px rgba(209, 70, 79, 0.22);
+}
+
+.user-reminder-item-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.user-reminder-item-head span {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.user-reminder-item p {
+    margin: 0 0 8px;
+    line-height: 1.7;
+    color: var(--text);
+}
+
+.user-order-notice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.user-order-notice {
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(25, 34, 45, 0.08);
+    background: rgba(255, 255, 255, 0.92);
+}
+
+.user-order-notice.info {
+    border-color: rgba(14, 109, 104, 0.18);
+    background: linear-gradient(180deg, rgba(238, 251, 248, 0.98), rgba(255, 255, 255, 0.94));
+}
+
+.user-order-notice.success {
+    border-color: rgba(24, 138, 96, 0.2);
+    background: linear-gradient(180deg, rgba(238, 252, 245, 0.98), rgba(255, 255, 255, 0.94));
+}
+
+.user-order-notice.warm,
+.user-order-notice.accent {
+    border-color: rgba(239, 143, 54, 0.22);
+    background: linear-gradient(180deg, rgba(255, 246, 232, 0.98), rgba(255, 255, 255, 0.94));
+}
+
+.user-order-notice-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.user-order-notice-head span {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.user-order-notice p {
+    margin: 0 0 8px;
+    line-height: 1.7;
+    color: var(--muted);
+}
+
+.notice-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.notice-pill.unread {
+    color: #fff;
+    background: linear-gradient(135deg, #d1464f, #ef8f36);
+}
+
+.track-inline-list {
+    display: grid;
+    gap: 10px;
+}
+
+.track-inline-item {
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(14, 109, 104, 0.12);
+}
+
+.track-inline-item p {
+    margin: 8px 0 6px;
+}
+
+.track-inline-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+}
+
+.track-inline-head span {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.user-track-list {
+    margin-top: 14px;
+}
+
 .editor-grid,
 .admin-form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1024,6 +1295,39 @@ textarea:focus,
 select:focus {
     border-color: rgba(14, 109, 104, 0.44);
     box-shadow: 0 0 0 4px rgba(14, 109, 104, 0.08);
+}
+
+.password-field {
+    position: relative;
+    width: 100%;
+}
+
+.password-field .input {
+    padding-right: 72px;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    border: 0;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: rgba(14, 109, 104, 0.08);
+    color: var(--brand);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.password-toggle-btn:hover {
+    background: rgba(14, 109, 104, 0.14);
+}
+
+.password-toggle-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(14, 109, 104, 0.16);
 }
 
 .overlay {
@@ -1229,6 +1533,10 @@ select:focus {
     justify-content: space-between;
     gap: 12px;
     align-items: flex-start;
+}
+
+.user-logistics-panel {
+    margin-top: 14px;
 }
 
 .address-spotlight,
@@ -1942,7 +2250,8 @@ select:focus {
 
     .footer-actions,
     .contact-actions,
-    .quick-status-row {
+    .quick-status-row,
+    .batch-toolbar {
         width: 100%;
     }
 
@@ -2000,6 +2309,7 @@ select:focus {
     .contact-actions .outline-btn.small,
     .contact-actions a.outline-btn.small,
     .quick-status-row .outline-btn.small,
+    .batch-toolbar .outline-btn.small,
     .template-row .outline-btn.small {
         flex: 1 1 calc(50% - 5px);
         justify-content: center;
@@ -2104,6 +2414,7 @@ select:focus {
     .footer-actions .outline-btn,
     .contact-actions .outline-btn,
     .quick-status-row .outline-btn,
+    .quick-status-row .solid-btn,
     .template-row .outline-btn {
         flex: 1 1 calc(50% - 7px);
         justify-content: center;

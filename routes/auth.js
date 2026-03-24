@@ -1,7 +1,6 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = require('../utils/auth');
-const { readUsers, writeUsers } = require('../utils/store');
+const { needsPasswordMigration, signAuthToken, verifyAuthToken, verifyPassword } = require('../utils/auth');
+const { readUsers, saveUser } = require('../utils/store');
 
 const router = express.Router();
 
@@ -10,10 +9,8 @@ function asyncHandler(handler) {
 }
 
 function buildAuthResponse(user) {
-    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-
     return {
-        token,
+        token: signAuthToken(user),
         user: {
             id: user.id,
             phone: user.phone,
@@ -42,8 +39,7 @@ router.post(
                 nickname: `用户${phone.slice(-4)}`,
                 role: 'user',
             };
-            users.push(user);
-            await writeUsers(users);
+            await saveUser(user);
         }
 
         res.json(buildAuthResponse(user));
@@ -64,9 +60,16 @@ router.post(
         }
 
         const users = await readUsers();
-        const user = users.find((item) => item.role === 'admin' && item.username === username && item.password === password);
-        if (!user) {
+        const user = users.find((item) => item.role === 'admin' && item.username === username);
+        if (!user || !verifyPassword(password, user.password)) {
             return res.status(401).json({ error: '管理员账号或密码错误。' });
+        }
+
+        if (needsPasswordMigration(user.password)) {
+            await saveUser({
+                ...user,
+                password,
+            });
         }
 
         res.json(buildAuthResponse(user));
@@ -82,7 +85,7 @@ router.get(
         }
 
         try {
-            const decoded = jwt.verify(token, JWT_SECRET);
+            const decoded = verifyAuthToken(token);
             const users = await readUsers();
             const user = users.find((item) => item.id === decoded.userId);
             if (!user) {

@@ -1,6 +1,33 @@
 window.AppState = (() => {
     const { linesToText } = window.AppTools;
 
+    const defaultLogisticsSettings = () => ({
+        sender_no: '',
+        authorization: '',
+        sign_key: '',
+        sender_name: '',
+        sender_phone: '',
+        sender_post_code: '',
+        sender_prov: '',
+        sender_city: '',
+        sender_county: '',
+        sender_address: '',
+        biz_product_no: '10',
+        biz_product_id: '',
+        contents_attribute: '3',
+        default_weight_grams: '500',
+        label_type: '129',
+        preferred_print_mode: 'auto',
+        preferred_printer: '',
+        sumatra_path: '',
+        paper_name: '100x180mm',
+        paper_width_mm: '100',
+        paper_height_mm: '180',
+        auto_sync_tracks: true,
+        track_auto_sync_interval_hours: 4,
+        track_stale_hours: 24,
+    });
+
     const defaultBuilder = () => ({
         flow_type: 'buy_device',
         plan_id: null,
@@ -62,8 +89,13 @@ window.AppState = (() => {
         status: 'active',
     });
 
-    const buildSettingsForm = (settings) => ({
+    const buildSettingsForm = (settings = {}) => ({
         ...settings,
+        payment_qrs: { ...(settings.payment_qrs || {}) },
+        logistics: {
+            ...defaultLogisticsSettings(),
+            ...(settings.logistics || {}),
+        },
         buy_flow_steps_text: linesToText(settings.buy_flow_steps),
         ship_flow_steps_text: linesToText(settings.ship_flow_steps),
         ship_checklist_text: linesToText(settings.ship_checklist),
@@ -72,5 +104,5 @@ window.AppState = (() => {
         admin_note_templates_text: linesToText(settings.admin_note_templates),
     });
 
-    return { defaultBuilder, defaultPlanEditor, defaultDeviceEditor, buildSettingsForm };
+    return { defaultBuilder, defaultPlanEditor, defaultDeviceEditor, buildSettingsForm, defaultLogisticsSettings };
 })();
