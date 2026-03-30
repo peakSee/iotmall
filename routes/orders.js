@@ -15,7 +15,9 @@ const {
     toInteger,
     toNumber,
 } = require('../utils/store');
-const { getEmsConfig, queryTrackItems, summarizeLatestTrack } = require('../utils/ems');
+const { analyzeTrackQueryResult, getEmsConfig, queryTrackItems, summarizeLatestTrack } = require('../utils/ems');
+const { buildStructuredOrderView, buildTrackingNumber, detectLogisticsStage } = require('../utils/order-helpers');
+const { buildTenantLimitExceededMessage, buildTenantUsageCounts } = require('../utils/tenant-license');
 const {
     buildOrderNoticeSnapshot,
     countUnreadOrderNotices,
@@ -44,6 +46,13 @@ function removePublicFile(publicPath) {
 
 function canUserCancel(order) {
     return ['pending_payment_review', 'awaiting_device_delivery'].includes(order.status);
+}
+
+function canUserUpdateDeviceShipment(order) {
+    return (
+        order?.flow_type === 'ship_device' &&
+        !['cancelled', 'completed'].includes(String(order?.status || '').trim())
+    );
 }
 
 function appendOrderLog(order, { operatorId = 0, operatorRole = '', action = '', content = '' } = {}) {
@@ -110,6 +119,8 @@ function buildClientEmsPayload(ems = {}) {
 }
 
 function enrichOrder(order) {
+    const structuredView = buildStructuredOrderView(order);
+    const stage = detectLogisticsStage(order);
     return {
         ...order,
         ems: buildClientEmsPayload(order.ems),
@@ -117,9 +128,12 @@ function enrichOrder(order) {
         total_amount: order.pricing.total_amount,
         can_cancel: canUserCancel(order),
         can_confirm: order.status === 'shipped',
-        tracking_number: order.ems?.waybill_no || order.merchant_tracking_number || '',
+        can_update_device_shipment: canUserUpdateDeviceShipment(order),
+        tracking_number: buildTrackingNumber(order),
         track_summary: order.ems?.track_summary || '',
         unread_notice_count: countUnreadOrderNotices(order),
+        logistics_stage: stage,
+        order_structure: structuredView,
     };
 }
 
@@ -143,6 +157,7 @@ router.post(
         const removeControl = String(req.body.customer_device_remove_control || '').trim();
         const deviceCondition = String(req.body.customer_device_condition || '').trim();
         const deviceNotes = String(req.body.customer_device_notes || '').trim();
+        const outboundCompany = String(req.body.customer_device_outbound_company || '').trim();
         const outboundTracking = String(req.body.customer_device_tracking || '').trim();
 
         if (!req.file) {
@@ -169,11 +184,23 @@ router.post(
             return res.status(400).json({ error: '请填写收货地址或回寄地址。' });
         }
 
-        const [settings, plans, devices] = await Promise.all([readSettings(), readPlans(), readDevices()]);
+        const [settings, plans, devices, orders] = await Promise.all([readSettings(), readPlans(), readDevices(), readOrders()]);
 
         if (!settings.payment_qrs[paymentMethod]) {
             removeTempFile(req.file);
             return res.status(400).json({ error: '当前支付方式尚未配置收款码。' });
+        }
+
+        const orderLimitMessage = buildTenantLimitExceededMessage(
+            'orders',
+            req.tenant,
+            buildTenantUsageCounts({
+                orders: orders.length,
+            }),
+        );
+        if (orderLimitMessage) {
+            removeTempFile(req.file);
+            return res.status(403).json({ error: orderLimitMessage });
         }
 
         const plan = plans.find((item) => item.id === planId && item.status === 'active');
@@ -191,7 +218,6 @@ router.post(
             }
             if (
                 Array.isArray(device.compatible_plan_ids) &&
-                device.compatible_plan_ids.length &&
                 !device.compatible_plan_ids.includes(plan.id)
             ) {
                 removeTempFile(req.file);
@@ -216,7 +242,9 @@ router.post(
             return res.status(400).json({ error: '请选择设备是否已去控。' });
         }
 
-        const planAmount = Number(plan.setup_price.toFixed(2));
+        const planDisplayAmount = Number(plan.setup_price.toFixed(2));
+        const planAmount = 0;
+        const planDiscountAmount = planDisplayAmount;
         const deviceAmount = flowType === 'buy_device' && device ? Number((device.price * quantity).toFixed(2)) : 0;
         const serviceAmount = flowType === 'ship_device' ? Number(settings.ship_service_fee.toFixed(2)) : 0;
         const totalAmount = Number((planAmount + deviceAmount + serviceAmount).toFixed(2));
@@ -228,6 +256,7 @@ router.post(
 
         const order = {
             id: Date.now(),
+            tenant_id: req.tenant?.id,
             order_no: makeOrderNo(),
             user_id: req.userId,
             flow_type: flowType,
@@ -254,6 +283,8 @@ router.post(
                 : null,
             pricing: {
                 plan_amount: planAmount,
+                plan_display_amount: planDisplayAmount,
+                plan_discount_amount: planDiscountAmount,
                 device_amount: deviceAmount,
                 service_amount: serviceAmount,
                 total_amount: totalAmount,
@@ -271,6 +302,7 @@ router.post(
                 remove_control: removeControl,
                 condition: deviceCondition,
                 notes: deviceNotes,
+                outbound_company: outboundCompany,
                 outbound_tracking: outboundTracking,
             },
             admin_note: '',
@@ -426,6 +458,47 @@ router.put(
 );
 
 router.put(
+    '/:id/device-shipment',
+    auth,
+    asyncHandler(async (req, res) => {
+        const orderId = toInteger(req.params.id, 0);
+        const order = (await readOrders()).find((item) => item.id === orderId && item.user_id === req.userId);
+
+        if (!order) {
+            return res.status(404).json({ error: '订单不存在。' });
+        }
+        if (!canUserUpdateDeviceShipment(order)) {
+            return res.status(400).json({ error: '当前订单状态不支持修改寄出快递信息。' });
+        }
+
+        const outboundCompany = String(req.body.outbound_company ?? req.body.customer_device_outbound_company ?? '').trim();
+        const outboundTracking = String(req.body.outbound_tracking ?? req.body.customer_device_tracking ?? '').trim();
+
+        order.device_submission = {
+            ...(order.device_submission || {}),
+            outbound_company: outboundCompany,
+            outbound_tracking: outboundTracking,
+        };
+
+        appendOrderLog(order, {
+            operatorId: req.userId,
+            operatorRole: 'user',
+            action: '补充寄出快递信息',
+            content: `快递公司：${outboundCompany || '未填'}；单号：${outboundTracking || '未填'}`,
+        });
+
+        await commitStoreChanges({
+            orders: [order],
+        });
+
+        res.json({
+            success: true,
+            device_submission: order.device_submission,
+        });
+    }),
+);
+
+router.put(
     '/:id/payment-proof',
     auth,
     uploadPaymentProof,
@@ -480,7 +553,7 @@ router.post(
             return res.status(404).json({ error: '订单不存在。' });
         }
 
-        const trackingNumber = order.ems?.waybill_no || order.merchant_tracking_number;
+        const trackingNumber = order.merchant_tracking_number || order.ems?.waybill_no;
         if (!trackingNumber) {
             return res.status(400).json({ error: '当前订单还没有快递单号。' });
         }
@@ -491,12 +564,18 @@ router.post(
             const { response, items } = await queryTrackItems(trackingNumber, order.ems?.tracking_direction || '0', {
                 config: runtimeConfig,
             });
+            const trackResult = analyzeTrackQueryResult(response, items);
+            if (trackResult.suspiciousEmpty) {
+                const error = new Error(trackResult.message);
+                error.response = response;
+                throw error;
+            }
             order.ems = {
                 ...order.ems,
                 last_serial_no: response.serialNo || order.ems?.last_serial_no || '',
                 last_error: '',
-                track_items: items,
-                track_summary: summarizeLatestTrack(items),
+                track_items: trackResult.items,
+                track_summary: summarizeLatestTrack(trackResult.items),
                 last_track_sync_at: new Date().toISOString(),
                 auto_track_sync_failure_streak: 0,
                 auto_track_sync_last_error: '',

@@ -1,7 +1,10 @@
+require('./runtime-config');
+
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { exec, execFile } = require('child_process');
+const { getCurrentTenantCode, normalizeTenantCode } = require('./tenant-context');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const UPLOAD_DIR = path.join(ROOT_DIR, 'uploads');
@@ -89,6 +92,77 @@ function normalizeTrackItems(value) {
             };
         })
         .filter((item) => item.opTime || item.opDesc || item.opName);
+}
+
+function analyzeTrackQueryResult(response = {}, items = []) {
+    const normalizedItems = normalizeTrackItems(items);
+    const retMsg = safeText(response?.retMsg);
+    const suspiciousEmptyPatterns = [
+        /无客户信息/,
+        /无查询信息/,
+        /无此/,
+        /查无/,
+        /不存在/,
+        /未查询到/,
+        /未找到/,
+        /无邮件信息/,
+    ];
+    const suspiciousEmpty = !normalizedItems.length && suspiciousEmptyPatterns.some((pattern) => pattern.test(retMsg));
+
+    return {
+        items: normalizedItems,
+        retMsg,
+        hasItems: normalizedItems.length > 0,
+        suspiciousEmpty,
+        message: suspiciousEmpty ? retMsg || 'EMS 轨迹未返回有效信息。' : '',
+    };
+}
+
+function hasObjectKeys(value) {
+    return Boolean(value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length);
+}
+
+function isEmsManagedOrder(order = {}) {
+    const ems = safeObject(order?.ems);
+    const artifactKeys = [
+        'order_payload',
+        'order_response',
+        'label_payload',
+        'label_response',
+        'print_payload',
+        'print_response',
+        'parse_payload',
+        'parse_response',
+        'validate_payload',
+        'validate_response',
+    ];
+    const timestampArtifacts = [
+        ems.address_parsed_at,
+        ems.reachable_checked_at,
+        ems.waybill_created_at,
+        ems.label_requested_at,
+        ems.label_generated_at,
+        ems.print_attempted_at,
+        ems.printed_at,
+    ];
+    const textArtifacts = [ems.ecommerce_user_id, ems.logistics_order_no, ems.label_file, ems.label_url];
+    const actionSet = new Set(
+        (Array.isArray(ems.api_logs) ? ems.api_logs : [])
+            .map((item) => safeText(item?.action).toLowerCase())
+            .filter(Boolean),
+    );
+
+    if (artifactKeys.some((key) => hasObjectKeys(ems[key]))) {
+        return true;
+    }
+    if (timestampArtifacts.some((value) => safeText(value))) {
+        return true;
+    }
+    if (textArtifacts.some((value) => safeText(value))) {
+        return true;
+    }
+
+    return ['parse-address', 'validate', 'create', 'label', 'print', 'print-preflight'].some((action) => actionSet.has(action));
 }
 
 function toNullableBoolean(value) {
@@ -265,16 +339,117 @@ function normalizeAddressCandidate(candidate = {}) {
     };
 }
 
+function normalizeAddressParseInputSafe(value = '') {
+    return safeText(value).replace(/\s+/g, '').replace(/^[,\uFF0C\uFF1B\u3002\uFF1A]+/, '');
+}
+
+function sliceAddressFromRegionSafe(value = '') {
+    const text = normalizeAddressParseInputSafe(value);
+    if (!text) {
+        return '';
+    }
+    const match = text.match(
+        /(\u5317\u4eac\u5e02|\u5929\u6d25\u5e02|\u4e0a\u6d77\u5e02|\u91cd\u5e86\u5e02|[\u4e00-\u9fa5]{2,8}\u7701|[\u4e00-\u9fa5]{2,12}\u81ea\u6cbb\u533a|[\u4e00-\u9fa5]{2,12}\u7279\u522b\u884c\u653f\u533a)/,
+    );
+    return match ? text.slice(match.index) : text;
+}
+
+function buildAddressParseInputVariantsSafe(wholeAddress = '') {
+    const original = normalizeAddressParseInputSafe(wholeAddress);
+    const variants = new Set([original, sliceAddressFromRegionSafe(original)]);
+    const phoneMatch = original.match(/1[3-9]\d{9}/);
+
+    if (phoneMatch) {
+        const afterPhone = original.slice((phoneMatch.index || 0) + phoneMatch[0].length);
+        if (afterPhone) {
+            variants.add(afterPhone);
+            variants.add(sliceAddressFromRegionSafe(afterPhone));
+        }
+    }
+
+    return Array.from(variants).filter(Boolean);
+}
+
+function parseAddressLocallySafe(wholeAddress = '') {
+    const text = sliceAddressFromRegionSafe(wholeAddress);
+    if (!text) {
+        return null;
+    }
+
+    const provinceMatch = text.match(
+        /^(\u5317\u4eac\u5e02|\u5929\u6d25\u5e02|\u4e0a\u6d77\u5e02|\u91cd\u5e86\u5e02|\u9999\u6e2f\u7279\u522b\u884c\u653f\u533a|\u6fb3\u95e8\u7279\u522b\u884c\u653f\u533a|\u5185\u8499\u53e4\u81ea\u6cbb\u533a|\u5e7f\u897f\u58ee\u65cf\u81ea\u6cbb\u533a|\u897f\u85cf\u81ea\u6cbb\u533a|\u5b81\u590f\u56de\u65cf\u81ea\u6cbb\u533a|\u65b0\u7586\u7ef4\u543e\u5c14\u81ea\u6cbb\u533a|.+?\u7701)/,
+    );
+    const prov = safeText(provinceMatch?.[0]);
+    let remainder = prov ? text.slice(prov.length) : text;
+
+    const cityMatch = remainder.match(/^(.+?(?:\u5e02|\u81ea\u6cbb\u5dde|\u5730\u533a|\u76df))/);
+    const city = safeText(
+        cityMatch?.[0],
+        ['\u5317\u4eac\u5e02', '\u5929\u6d25\u5e02', '\u4e0a\u6d77\u5e02', '\u91cd\u5e86\u5e02'].includes(prov) ? prov : '',
+    );
+    remainder = cityMatch ? remainder.slice(city.length) : remainder;
+
+    const countyMatch = remainder.match(/^(.+?(?:\u533a|\u53bf|\u5e02|\u65d7))/);
+    const county = safeText(countyMatch?.[0]);
+    if (!prov || !city || !county) {
+        return null;
+    }
+
+    return normalizeAddressCandidate({
+        wholeAddress: text,
+        prov,
+        city,
+        county,
+    });
+}
+
+function isAddressCandidateConsistent(candidate = {}, wholeAddress = '') {
+    const source = normalizeAddressParseInputSafe(wholeAddress);
+    const tokens = [candidate.prov, candidate.city, candidate.county].map((item) => normalizeAddressParseInputSafe(item)).filter(Boolean);
+    if (!source || !tokens.length) {
+        return false;
+    }
+    const matchedCount = tokens.filter((token) => source.includes(token)).length;
+    return matchedCount >= Math.min(2, tokens.length);
+}
+
 async function parseAddress(wholeAddress, options = {}) {
-    const response = await callEmsApi('060001', [{ wholeAddress: safeText(wholeAddress) }], options);
-    const businessBody = pickBusinessBody(response.retBody);
-    const items = Array.isArray(businessBody) ? businessBody : Array.isArray(response.retBody) ? response.retBody : [];
-    return items.map(normalizeAddressCandidate).filter((item) => item.prov || item.city || item.county);
+    const variants = buildAddressParseInputVariantsSafe(wholeAddress);
+
+    for (const candidateInput of variants) {
+        const response = await callEmsApi('060001', [{ wholeAddress: candidateInput }], options);
+        const businessBody = pickBusinessBody(response.retBody);
+        const items = Array.isArray(businessBody) ? businessBody : Array.isArray(response.retBody) ? response.retBody : [];
+        const normalized = items.map(normalizeAddressCandidate).filter((item) => item.prov || item.city || item.county);
+        const consistent = normalized.filter((item) => isAddressCandidateConsistent(item, candidateInput));
+        if (consistent.length) {
+            return consistent;
+        }
+    }
+
+    for (const candidateInput of variants) {
+        const localCandidate = parseAddressLocallySafe(candidateInput);
+        if (localCandidate) {
+            return [localCandidate];
+        }
+    }
+
+    return [];
 }
 
 function extractAddressDetail(wholeAddress, parsedAddress = {}) {
-    let detail = safeText(wholeAddress).replace(/\s+/g, '');
-    const tokens = uniqueArray([parsedAddress.prov, parsedAddress.city, parsedAddress.county].map((item) => safeText(item)));
+    let detail = sliceAddressFromRegionSafe(wholeAddress);
+    const fallbackParsedAddress = parseAddressLocallySafe(wholeAddress) || {};
+    const tokens = uniqueArray(
+        [
+            parsedAddress.prov,
+            parsedAddress.city,
+            parsedAddress.county,
+            fallbackParsedAddress.prov,
+            fallbackParsedAddress.city,
+            fallbackParsedAddress.county,
+        ].map((item) => safeText(item)),
+    );
 
     tokens.forEach((token) => {
         while (token && detail.startsWith(token)) {
@@ -302,7 +477,8 @@ async function createWaybillOrder(payload, options = {}) {
 
 function saveLabelPdf(orderNo, waybillNo, pdfBuffer) {
     ensureDir(LABEL_DIR);
-    const fileName = `${sanitizeFilePart(orderNo, 'order')}-${sanitizeFilePart(waybillNo, 'waybill')}.pdf`;
+    const tenantCode = normalizeTenantCode(getCurrentTenantCode(), 'default');
+    const fileName = `${sanitizeFilePart(tenantCode, 'default')}-${sanitizeFilePart(orderNo, 'order')}-${sanitizeFilePart(waybillNo, 'waybill')}.pdf`;
     const diskPath = path.join(LABEL_DIR, fileName);
     fs.writeFileSync(diskPath, pdfBuffer);
     return `/uploads/ems-labels/${fileName}`;
@@ -615,6 +791,26 @@ function printerLooksOffline(printer = {}) {
     return Boolean(printer?.workOffline) || /offline|脱机|error|错误|不可用/.test(printerStatus);
 }
 
+function printerLooksLikeLabelPrinter(printer = {}, config = {}) {
+    const printerIdentity = [printer?.name, printer?.driverName, config?.paperName]
+        .map((item) => safeText(item).toLowerCase())
+        .filter(Boolean)
+        .join(' ');
+    if (/(hprt|xprinter|zebra|tsc|gprinter|postek|label|thermal|鐑晱|闈㈠崟)/.test(printerIdentity)) {
+        return true;
+    }
+
+    const expectedWidth = toPositiveNumber(config?.paperWidthMm);
+    const expectedHeight = toPositiveNumber(config?.paperHeightMm);
+    if (!expectedWidth || !expectedHeight) {
+        return false;
+    }
+
+    const shortEdge = Math.min(expectedWidth, expectedHeight);
+    const longEdge = Math.max(expectedWidth, expectedHeight);
+    return shortEdge <= 120 && longEdge <= 220;
+}
+
 function evaluatePrintPreflight(diagnostics = {}, options = {}) {
     const config = options.config || getEmsConfig();
     const mode = safeText(options.mode, diagnostics.printMode || config.printMode).toLowerCase();
@@ -622,6 +818,9 @@ function evaluatePrintPreflight(diagnostics = {}, options = {}) {
     const blockingReasons = [];
     const matchedPrinter = diagnostics.matchedPrinter || null;
     const paper = diagnostics.paper || null;
+    const missingPaperConfiguration = requiresPrinter && matchedPrinter && !diagnostics.printerConfiguration?.paperSize;
+    const allowMissingPaperConfiguration =
+        missingPaperConfiguration && printerLooksLikeLabelPrinter(matchedPrinter, config);
 
     if (requiresPrinter && !matchedPrinter) {
         blockingReasons.push('未匹配到默认打印机，请先在物流设置中确认打印机名称。');
@@ -629,13 +828,13 @@ function evaluatePrintPreflight(diagnostics = {}, options = {}) {
     if (requiresPrinter && matchedPrinter && printerLooksOffline(matchedPrinter)) {
         blockingReasons.push(`打印机 ${matchedPrinter.name} 当前离线或不可用，请先检查打印机连接状态。`);
     }
-    if (requiresPrinter && matchedPrinter && !diagnostics.printerConfiguration?.paperSize) {
+    if (missingPaperConfiguration && !allowMissingPaperConfiguration) {
         blockingReasons.push('未读取到打印机纸张配置，请先在打印机驱动中确认纸张尺寸。');
     }
     if (requiresPrinter && paper?.match === false) {
         blockingReasons.push(`${paper.reason}，请调整为 ${paper.expectedDisplay || config.paperName} 后再打印。`);
     }
-    if (requiresPrinter && paper?.match === null && paper?.reason) {
+    if (requiresPrinter && paper?.match === null && paper?.reason && !allowMissingPaperConfiguration) {
         blockingReasons.push(`${paper.reason}，请先完成打印机纸张自检。`);
     }
 
@@ -644,6 +843,7 @@ function evaluatePrintPreflight(diagnostics = {}, options = {}) {
         mode,
         requiresPrinter,
         printerOnline: matchedPrinter ? !printerLooksOffline(matchedPrinter) : false,
+        paperCheckRelaxed: allowMissingPaperConfiguration,
         blockingReasons,
     };
 }
@@ -748,6 +948,8 @@ async function getPrintDiagnostics(options = {}) {
     const sumatraPath = getConfiguredSumatraPath(config);
     const paperMatch = evaluatePaperMatch(config, printerConfiguration);
     const warnings = [];
+    const relaxMissingPaperConfiguration =
+        matchedPrinter && !printerConfiguration?.paperSize && printerLooksLikeLabelPrinter(matchedPrinter, config);
 
     if (process.platform === 'win32' && !printers.length) {
         warnings.push('未检测到本机打印机，请先安装打印机驱动。');
@@ -758,8 +960,18 @@ async function getPrintDiagnostics(options = {}) {
     if ((config.printMode === 'auto' || config.printMode === 'sumatra') && !sumatraPath) {
         warnings.push('未检测到 SumatraPDF，自动静默打印会退回到其他方式。');
     }
-    if (matchedPrinter && !printerConfiguration?.paperSize) {
+    /* legacy relaxed warning removed
+        warnings.push(
+            `鎵撳嵃鏈?${matchedPrinter.name} 鏈繑鍥炵焊寮犲昂瀵革紝绯荤粺灏嗘寜鍚庡彴閰嶇疆 ${config.paperName || '鏍囩绾?} 缁х画鎵撳嵃锛屽缓璁厛杩愯鑷纭鍋忕Щ銆俙
+        );
+    */
+    if (matchedPrinter && !printerConfiguration?.paperSize && !relaxMissingPaperConfiguration) {
         warnings.push('已找到打印机，但未读取到纸张配置，请确认驱动中纸张大小是否正确。');
+    }
+    if (relaxMissingPaperConfiguration) {
+        warnings.push(
+            `Printer ${matchedPrinter.name} did not report paper size. The system will continue with configured paper ${config.paperName || 'label paper'}, but please run diagnostics and confirm alignment first.`,
+        );
     }
     if (matchedPrinter && printerConfiguration?.paperSize && safeText(config.paperName)) {
         const actualPaper = printerConfiguration.paperSize.toLowerCase();
@@ -932,6 +1144,8 @@ module.exports = {
     DEFAULT_CONTENTS_ATTRIBUTE,
     DEFAULT_LABEL_TYPE,
     DEFAULT_WEIGHT_GRAMS,
+    analyzeTrackQueryResult,
+    isEmsManagedOrder,
     assertPrintPreflight,
     callEmsApi,
     checkReachability,

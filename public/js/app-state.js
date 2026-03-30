@@ -26,6 +26,11 @@ window.AppState = (() => {
         auto_sync_tracks: true,
         track_auto_sync_interval_hours: 4,
         track_stale_hours: 24,
+        track_query_url_template: '',
+        payment_review_alert_hours: 12,
+        ready_to_ship_alert_hours: 24,
+        auto_track_sync_fail_alert_threshold: 2,
+        print_failure_alert_threshold: 2,
     });
 
     const defaultBuilder = () => ({
@@ -44,6 +49,7 @@ window.AppState = (() => {
         customer_device_remove_control: 'unknown',
         customer_device_condition: '',
         customer_device_notes: '',
+        customer_device_outbound_company: '',
         customer_device_tracking: '',
     });
 

@@ -1,6 +1,30 @@
-﻿const { api, money, linesToText, textToLines, encodePath, placeholder } = window.AppTools;
-const { defaultBuilder, defaultPlanEditor, defaultDeviceEditor, buildSettingsForm } = window.AppState;
-const { storefrontTemplate, adminTemplate, modalTemplate } = window.AppTemplates;
+const assertBootDependency = (value, message) => {
+    if (!value) {
+        throw new Error(message);
+    }
+    return value;
+};
+
+assertBootDependency(window.Vue, 'Vue dependency failed to load. Please refresh and try again.');
+assertBootDependency(window.axios, 'Axios dependency failed to load. Please refresh and try again.');
+const appTools = assertBootDependency(window.AppTools, 'App tools failed to initialize. Please refresh and try again.');
+const appState = assertBootDependency(window.AppState, 'App state failed to initialize. Please refresh and try again.');
+const appTemplates = assertBootDependency(window.AppTemplates, 'App templates failed to initialize. Please refresh and try again.');
+
+const {
+    api,
+    money,
+    linesToText,
+    textToLines,
+    encodePath,
+    placeholder,
+    resolveTenantCode,
+    getTenantToken,
+    setTenantToken,
+    clearTenantToken,
+} = appTools;
+const { defaultBuilder, defaultPlanEditor, defaultDeviceEditor, buildSettingsForm } = appState;
+const { storefrontTemplate, adminTemplate, modalTemplate } = appTemplates;
 
 const App = {
     template: `<div>${storefrontTemplate}${adminTemplate}${modalTemplate}</div>`,
@@ -18,6 +42,26 @@ const App = {
             },
             plans: [],
             devices: [],
+            currentTenant: {
+                id: 1,
+                code: resolveTenantCode(),
+                name: '',
+                status: 'active',
+                expires_at: null,
+                subscription_type: 'paid',
+                subscription_name: '标准版',
+                features: [],
+                max_user_count: 0,
+                max_order_count: 0,
+                max_plan_count: 0,
+                max_device_count: 0,
+                primary_domain: '',
+                domain_bindings: [],
+                primary_admin_domain: '',
+                admin_domain_bindings: [],
+                limit_summary: null,
+                unavailable_message: '',
+            },
             currentUser: null,
             loginPhone: '',
             adminUsername: '',
@@ -25,6 +69,15 @@ const App = {
             showLoginModal: false,
             showBuilder: false,
             showOrdersModal: false,
+            showShipAddressPrompt: false,
+            shipAddressPromptOrderNo: '',
+            showTrackModal: false,
+            activeTrackOrderId: null,
+            showAdminTrackModal: false,
+            activeAdminTrackOrderId: null,
+            showAdminDeleteModal: false,
+            adminDeleteOrderIds: [],
+            adminBatchStatus: '',
             myOrders: [],
             myOrdersPollTimer: null,
             myOrderNoticeSnapshots: {},
@@ -33,11 +86,23 @@ const App = {
                 admin_account_current_password: false,
                 admin_account_new_password: false,
                 admin_account_confirm_password: false,
+                tenant_admin_password: false,
+                tenant_admin_password_confirm: false,
+                team_member_password: false,
+                team_member_password_confirm: false,
                 logistics_authorization: false,
                 logistics_sign_key: false,
             },
             orderProofFiles: {},
             builderForm: defaultBuilder(),
+            builderPlanCarrierFilter: 'all',
+            builderMobileStep: 1,
+            storefrontPlanCarrierFilter: 'all',
+            storefrontSelectedPlanId: null,
+            isCompactMobile: false,
+            compactViewportMediaQuery: null,
+            showAllStorefrontBundles: false,
+            showAllStorefrontDevices: false,
             paymentProofFile: null,
             paymentProofPreview: null,
             previewImageUrl: null,
@@ -46,14 +111,21 @@ const App = {
             savingStates: {
                 login: false,
                 submitOrder: false,
+                adminRefresh: false,
                 adminOrders: false,
                 exportOrders: false,
+                auditExport: false,
                 settings: false,
                 account: false,
+                tenants: false,
+                team: false,
+                billing: false,
                 plan: false,
                 device: false,
                 uploadPaymentQrs: false,
                 batchOrders: false,
+                deleteOrders: false,
+                domainDiagnostics: false,
                 diagnostics: false,
             },
             savingOrderIds: [],
@@ -61,10 +133,11 @@ const App = {
             isAdminView: false,
             adminTabs: [
                 { value: 'dashboard', label: '数据概览' },
+                { value: 'platform', label: '租户管理', platform_only: true },
                 { value: 'plans', label: '套餐管理' },
                 { value: 'devices', label: '设备管理' },
                 { value: 'orders', label: '订单管理' },
-                { value: 'logistics', label: '物流设置' },
+                { value: 'logistics', label: '物流设置', required_feature: 'ems' },
                 { value: 'settings', label: '店铺设置' },
             ],
             adminTab: 'dashboard',
@@ -78,14 +151,28 @@ const App = {
                 'cancelled',
             ],
             adminDashboard: {
+                tenant: null,
                 plan_count: 0,
                 device_count: 0,
                 order_count: 0,
                 user_count: 0,
                 total_revenue: 0,
+                revenue_today: 0,
+                revenue_7d: 0,
+                revenue_30d: 0,
+                avg_order_amount: 0,
+                order_count_today: 0,
+                order_count_7d: 0,
+                order_count_30d: 0,
                 pending_count: 0,
                 buy_device_count: 0,
                 ship_device_count: 0,
+                status_counts: {},
+                configuring_count: 0,
+                ready_to_ship_count: 0,
+                shipped_count: 0,
+                completed_count: 0,
+                cancelled_count: 0,
                 low_stock_devices: [],
                 ems_error_count: 0,
                 ems_pending_label_count: 0,
@@ -100,10 +187,190 @@ const App = {
                 ems_auto_track_sync_fail_count: 0,
                 ems_auto_track_sync_fail_orders: [],
                 ems_problem_orders: [],
+                ems_workflow_overview: {},
+                daily_order_series: [],
+                daily_revenue_series: [],
+                top_plan_orders: [],
+                top_device_orders: [],
+                stale_payment_review_count: 0,
+                stale_payment_review_orders: [],
+                ready_to_ship_overdue_count: 0,
+                ready_to_ship_overdue_orders: [],
+                alerts: [],
+                audit_count_today: 0,
+                audit_error_count_today: 0,
+                recent_audit_logs: [],
             },
             adminPlans: [],
             adminDevices: [],
             adminOrders: [],
+            adminAuditLogs: [],
+            adminAuditSummary: {
+                total_count: 0,
+                today_count: 0,
+                success_count: 0,
+                error_count: 0,
+                warning_count: 0,
+                info_count: 0,
+                latest_created_at: null,
+                category_breakdown: [],
+            },
+            auditScopeOptions: [{ code: 'current', label: '当前租户' }],
+            auditPagination: {
+                page: 1,
+                page_size: 20,
+                total_count: 0,
+                total_pages: 1,
+                has_prev: false,
+                has_next: false,
+                from_index: 0,
+                to_index: 0,
+            },
+            auditPageSizeOptions: [10, 20, 50, 100],
+            auditCategoryOptions: [],
+            auditLogFilters: {
+                q: '',
+                category: 'all',
+                status: 'all',
+                scope: 'current',
+                date_from: '',
+                date_to: '',
+            },
+            adminLastRefreshedAt: null,
+            adminOrdersLastFetchedAt: null,
+            adminAuditLastFetchedAt: null,
+            currentTenantDomainDiagnostics: null,
+            tenantDomainDiagnosticsMap: {},
+            tenantDomainDiagnosticsLoadingIds: [],
+            platformTenants: [],
+            adminTeamMembers: [],
+            teamRoleOptions: [],
+            teamSummary: {
+                total_count: 0,
+                active_count: 0,
+                disabled_count: 0,
+                role_breakdown: [],
+            },
+            showTeamEditor: false,
+            teamEditorForm: {
+                id: null,
+                username: '',
+                nickname: '',
+                phone: '',
+                role: 'staff_service',
+                status: 'active',
+                permissions: [],
+                password: '',
+                password_confirm: '',
+            },
+            teamSnapshot: JSON.stringify({
+                id: null,
+                username: '',
+                nickname: '',
+                phone: '',
+                role: 'staff_service',
+                status: 'active',
+                permissions: [],
+                password: '',
+                password_confirm: '',
+            }),
+            platformBillingRecords: [],
+            platformBillingTenants: [],
+            showBillingEditor: false,
+            billingEditorForm: {
+                tenant_id: '',
+                kind: 'renewal',
+                subscription_name: '',
+                amount: 0,
+                duration_days: 30,
+                max_user_count: '',
+                max_order_count: '',
+                max_plan_count: '',
+                max_device_count: '',
+                features: [],
+                auto_suspend_on_expiry: true,
+                note: '',
+                apply_now: true,
+            },
+            billingSnapshot: JSON.stringify({
+                tenant_id: '',
+                kind: 'renewal',
+                subscription_name: '',
+                amount: 0,
+                duration_days: 30,
+                max_user_count: '',
+                max_order_count: '',
+                max_plan_count: '',
+                max_device_count: '',
+                features: [],
+                auto_suspend_on_expiry: true,
+                note: '',
+                apply_now: true,
+            }),
+            platformTenantStats: {
+                total_count: 0,
+                active_count: 0,
+                expiring_soon_count: 0,
+                expired_count: 0,
+                suspended_count: 0,
+                config_warning_count: 0,
+                healthy_count: 0,
+            },
+            showTenantEditor: false,
+            tenantEditorForm: {
+                id: null,
+                code: '',
+                name: '',
+                status: 'active',
+                expires_at: '',
+                subscription_name: '标准版',
+                max_user_count: 0,
+                max_order_count: 0,
+                max_plan_count: 0,
+                max_device_count: 0,
+                subscription_type: 'paid',
+                auto_suspend_on_expiry: true,
+                primary_domain: '',
+                domain_bindings_text: '',
+                primary_admin_domain: '',
+                admin_domain_bindings_text: '',
+                features: ['storefront', 'orders', 'ems', 'printing', 'tracking', 'batch', 'analytics'],
+                contact_name: '',
+                contact_phone: '',
+                note: '',
+                admin_username: '',
+                admin_nickname: '',
+                admin_phone: '',
+                admin_password: '',
+                admin_password_confirm: '',
+            },
+            tenantSnapshot: JSON.stringify({
+                id: null,
+                code: '',
+                name: '',
+                status: 'active',
+                expires_at: '',
+                subscription_name: '标准版',
+                max_user_count: 0,
+                max_order_count: 0,
+                max_plan_count: 0,
+                max_device_count: 0,
+                subscription_type: 'paid',
+                auto_suspend_on_expiry: true,
+                primary_domain: '',
+                domain_bindings_text: '',
+                primary_admin_domain: '',
+                admin_domain_bindings_text: '',
+                features: ['storefront', 'orders', 'ems', 'printing', 'tracking', 'batch', 'analytics'],
+                contact_name: '',
+                contact_phone: '',
+                note: '',
+                admin_username: '',
+                admin_nickname: '',
+                admin_phone: '',
+                admin_password: '',
+                admin_password_confirm: '',
+            }),
             selectedAdminOrderIds: [],
             adminOrderExecutionStates: {},
             adminWorkflowPollTimer: null,
@@ -150,7 +417,52 @@ const App = {
     },
     computed: {
         isAdmin() {
-            return this.currentUser?.role === 'admin';
+            return Boolean(this.currentUser && this.currentUser.role && this.currentUser.role !== 'user');
+        },
+        isPlatformAdmin() {
+            return this.currentUser?.role === 'platform_admin';
+        },
+        allAdminTabs() {
+            return [
+                { value: 'dashboard', label: '数据概览', required_permission: 'dashboard.view' },
+                { value: 'site', label: '站点与授权', required_permission: 'dashboard.view' },
+                { value: 'platform', label: '租户管理', platform_only: true, required_permission: 'platform.manage' },
+                { value: 'billing', label: '计费授权', platform_only: true, required_permission: 'billing.manage' },
+                { value: 'plans', label: '套餐管理', required_permission: 'catalog.manage' },
+                { value: 'devices', label: '设备管理', required_permission: 'catalog.manage' },
+                { value: 'orders', label: '订单管理', required_permission: 'orders.manage' },
+                { value: 'logistics', label: '物流设置', required_feature: 'ems', required_permission: 'logistics.manage' },
+                { value: 'audit', label: '操作日志', required_permission: 'dashboard.view' },
+                { value: 'team', label: '团队管理', required_permission: 'team.manage' },
+                { value: 'settings', label: '店铺设置', required_permission: 'tenant.settings' },
+                { value: 'account', label: '账号安全', required_permission: 'account.manage' },
+            ];
+        },
+        visibleAdminTabs() {
+            return this.allAdminTabs.filter(
+                (tab) =>
+                    (!tab.platform_only || this.isPlatformAdmin) &&
+                    (!tab.required_feature || this.tenantFeatureEnabled(tab.required_feature)) &&
+                    (!tab.required_permission || this.adminPermissionEnabled(tab.required_permission)),
+            );
+        },
+        currentAdminTabLabel() {
+            return this.visibleAdminTabs.find((tab) => tab.value === this.adminTab)?.label || '后台';
+        },
+        adminOrderActiveFilterCount() {
+            const filters = this.normalizeAdminOrderFilters();
+            return [filters.q, filters.status !== 'all', filters.flow_type !== 'all', filters.date_from, filters.date_to].filter(Boolean).length;
+        },
+        auditLogActiveFilterCount() {
+            const filters = this.normalizeAuditLogFilters();
+            return [
+                filters.q,
+                filters.category !== 'all',
+                filters.status !== 'all',
+                filters.scope && filters.scope !== 'current',
+                filters.date_from,
+                filters.date_to,
+            ].filter(Boolean).length;
         },
         selectedPlan() {
             return this.plans.find((item) => item.id === this.builderForm.plan_id) || null;
@@ -158,27 +470,144 @@ const App = {
         selectedDevice() {
             return this.devices.find((item) => item.id === this.builderForm.device_id) || null;
         },
+        storefrontPlanCarrierOptions() {
+            const carrierOrder = ['移动', '联通', '电信', '广电'];
+            const counts = this.plans.reduce(
+                (result, plan) => {
+                    const carrier = this.normalizePlanCarrier(plan?.carrier);
+                    if (carrier && result[carrier] !== undefined) {
+                        result[carrier] += 1;
+                    }
+                    return result;
+                },
+                {
+                    移动: 0,
+                    联通: 0,
+                    电信: 0,
+                    广电: 0,
+                },
+            );
+            return [
+                {
+                    code: 'all',
+                    label: '全部',
+                    count: this.plans.length,
+                    disabled: !this.plans.length,
+                },
+                ...carrierOrder.map((carrier) => ({
+                    code: carrier,
+                    label: carrier,
+                    count: counts[carrier] || 0,
+                    disabled: !counts[carrier],
+                })),
+            ];
+        },
+        filteredStorefrontPlans() {
+            if (this.storefrontPlanCarrierFilter === 'all') {
+                return this.plans;
+            }
+            return this.plans.filter((plan) => this.normalizePlanCarrier(plan?.carrier) === this.storefrontPlanCarrierFilter);
+        },
+        storefrontSelectedPlan() {
+            return this.filteredStorefrontPlans.find((item) => item.id === this.storefrontSelectedPlanId) || this.filteredStorefrontPlans[0] || null;
+        },
         availablePlansForBuilder() {
             if (this.builderForm.flow_type !== 'buy_device' || !this.selectedDevice) {
                 return this.plans;
             }
             const compatibleIds = Array.isArray(this.selectedDevice.compatible_plan_ids) ? this.selectedDevice.compatible_plan_ids : [];
-            if (!compatibleIds.length) {
-                return this.plans;
-            }
             return this.plans.filter((plan) => compatibleIds.includes(plan.id));
+        },
+        builderPlanCarrierOptions() {
+            const carrierOrder = ['移动', '联通', '电信', '广电'];
+            const counts = this.availablePlansForBuilder.reduce(
+                (result, plan) => {
+                    const carrier = this.normalizePlanCarrier(plan?.carrier);
+                    if (carrier && result[carrier] !== undefined) {
+                        result[carrier] += 1;
+                    }
+                    return result;
+                },
+                {
+                    移动: 0,
+                    联通: 0,
+                    电信: 0,
+                    广电: 0,
+                },
+            );
+            return [
+                {
+                    code: 'all',
+                    label: '全部',
+                    count: this.availablePlansForBuilder.length,
+                    disabled: !this.availablePlansForBuilder.length,
+                },
+                ...carrierOrder.map((carrier) => ({
+                    code: carrier,
+                    label: carrier,
+                    count: counts[carrier] || 0,
+                    disabled: !counts[carrier],
+                })),
+            ];
+        },
+        filteredAvailablePlansForBuilder() {
+            if (this.builderPlanCarrierFilter === 'all') {
+                return this.availablePlansForBuilder;
+            }
+            return this.availablePlansForBuilder.filter(
+                (plan) => this.normalizePlanCarrier(plan?.carrier) === this.builderPlanCarrierFilter,
+            );
         },
         activePaymentQr() {
             return this.builderForm.payment_method === 'alipay' ? this.settings.payment_qrs?.alipay : this.settings.payment_qrs?.wechat;
         },
         orderTotal() {
-            const planAmount = this.selectedPlan ? Number(this.selectedPlan.setup_price || 0) : 0;
             const deviceAmount =
                 this.builderForm.flow_type === 'buy_device' && this.selectedDevice
                     ? Number(this.selectedDevice.price || 0) * Number(this.builderForm.quantity || 1)
                     : 0;
             const serviceAmount = this.builderForm.flow_type === 'ship_device' ? Number(this.settings.ship_service_fee || 0) : 0;
-            return Number((planAmount + deviceAmount + serviceAmount).toFixed(2));
+            return Number((deviceAmount + serviceAmount).toFixed(2));
+        },
+        builderStepItems() {
+            const definitions = this.builderStepDefinitions();
+            const currentStep = Math.min(Math.max(1, Number(this.builderMobileStep || 1)), definitions.length || 1);
+
+            return definitions.map((item, index) => {
+                const stepNumber = index + 1;
+                const complete = this.builderStepCompleted(item.key);
+                let state = 'muted';
+                if (stepNumber === currentStep) {
+                    state = 'active';
+                } else if (stepNumber < currentStep || complete) {
+                    state = 'done';
+                }
+                return {
+                    ...item,
+                    index: stepNumber,
+                    complete,
+                    state,
+                };
+            });
+        },
+        builderStepCount() {
+            return this.builderStepItems.length || 1;
+        },
+        builderCurrentStepKey() {
+            return this.builderStepItems[this.builderMobileStep - 1]?.key || this.builderStepItems[0]?.key || 'contact';
+        },
+        builderCurrentStepLabel() {
+            return this.builderStepItems[this.builderMobileStep - 1]?.label || this.builderStepItems[0]?.label || '填写信息';
+        },
+        builderMobilePrimaryActionText() {
+            if (this.builderMobileStep >= this.builderStepCount) {
+                return this.savingStates.submitOrder ? '提交中...' : '提交订单';
+            }
+            const nextStep = this.builderStepItems[this.builderMobileStep];
+            return nextStep ? `下一步：${nextStep.label}` : '下一步';
+        },
+        builderMobileBackActionText() {
+            return this.builderMobileStep > 1 ? '上一步' : '关闭';
         },
         featuredBundles() {
             const hotDevices = [...this.devices]
@@ -189,7 +618,7 @@ const App = {
             return hotDevices
                 .map((device) => {
                     const compatibleIds = this.getCompatiblePlanIds(device);
-                    const candidatePlans = compatibleIds.length ? this.plans.filter((plan) => compatibleIds.includes(plan.id)) : this.plans;
+                    const candidatePlans = this.plans.filter((plan) => compatibleIds.includes(plan.id));
                     const plan = [...candidatePlans].sort(
                         (a, b) => Number(b.featured) - Number(a.featured) || b.hot_rank - a.hot_rank || a.sort_order - b.sort_order,
                     )[0];
@@ -202,6 +631,24 @@ const App = {
                     };
                 })
                 .filter(Boolean);
+        },
+        visibleStorefrontBundles() {
+            if (!this.isCompactMobile || this.showAllStorefrontBundles) {
+                return this.featuredBundles;
+            }
+            return this.featuredBundles.slice(0, 2);
+        },
+        hasMoreStorefrontBundles() {
+            return this.isCompactMobile && this.featuredBundles.length > this.visibleStorefrontBundles.length;
+        },
+        visibleStorefrontDevices() {
+            if (!this.isCompactMobile || this.showAllStorefrontDevices) {
+                return this.devices;
+            }
+            return this.devices.slice(0, 3);
+        },
+        hasMoreStorefrontDevices() {
+            return this.isCompactMobile && this.devices.length > this.visibleStorefrontDevices.length;
         },
         faqEntries() {
             return (this.settings.faq_items || [])
@@ -243,8 +690,86 @@ const App = {
                 latestTime: latestNotice?.created_at || null,
             };
         },
+        activeTrackModalOrder() {
+            return this.myOrders.find((order) => order.id === this.activeTrackOrderId) || null;
+        },
+        activeAdminTrackModalOrder() {
+            return this.adminOrders.find((order) => order.id === this.activeAdminTrackOrderId) || null;
+        },
+        adminDeleteOrders() {
+            return this.adminDeleteOrderIds
+                .map((orderId) => this.adminOrders.find((order) => order.id === orderId) || null)
+                .filter(Boolean);
+        },
+        adminDeleteSummary() {
+            return this.adminDeleteOrders.reduce(
+                (summary, order) => {
+                    summary.total += 1;
+                    if (order.payment_proof) summary.paymentProofs += 1;
+                    if (order?.ems?.label_file) summary.labels += 1;
+                    if (order.flow_type === 'buy_device' && order.device_id && order.status !== 'cancelled') {
+                        summary.stockRestoreCount += Number(order.quantity || 1);
+                    }
+                    return summary;
+                },
+                {
+                    total: 0,
+                    paymentProofs: 0,
+                    labels: 0,
+                    stockRestoreCount: 0,
+                },
+            );
+        },
         adminNoteTemplates() {
             return (this.settings.admin_note_templates || []).filter(Boolean);
+        },
+        teamPermissionOptions() {
+            const fallbackCodes = [
+                'dashboard.view',
+                'catalog.manage',
+                'orders.manage',
+                'logistics.manage',
+                'tenant.settings',
+                'account.manage',
+                'team.manage',
+            ];
+            const orderMap = new Map(fallbackCodes.map((code, index) => [code, index]));
+            const options = new Map();
+            const rolePermissionCodes = this.teamRoleOptions.flatMap((role) => (Array.isArray(role.permissions) ? role.permissions : []));
+            const seedCodes = rolePermissionCodes.length ? rolePermissionCodes : fallbackCodes;
+
+            seedCodes.forEach((code) => {
+                if (!code) return;
+                options.set(code, {
+                    code,
+                    label: this.permissionLabel(code),
+                    description: this.permissionDescription(code),
+                });
+            });
+
+            this.teamRoleOptions.forEach((role) => {
+                (role.permission_labels || []).forEach((permission) => {
+                    const code = permission?.code || '';
+                    if (!code) return;
+                    options.set(code, {
+                        code,
+                        label: this.permissionLabel(permission),
+                        description: this.permissionDescription(permission),
+                    });
+                });
+            });
+
+            return Array.from(options.values()).sort((left, right) => {
+                const leftOrder = orderMap.has(left.code) ? orderMap.get(left.code) : Number.MAX_SAFE_INTEGER;
+                const rightOrder = orderMap.has(right.code) ? orderMap.get(right.code) : Number.MAX_SAFE_INTEGER;
+                return leftOrder - rightOrder || left.code.localeCompare(right.code, 'zh-CN');
+            });
+        },
+        tenantFeatureOptions() {
+            return this.buildTenantFeatureOptions(this.tenantEditorForm.features);
+        },
+        billingFeatureOptions() {
+            return this.buildTenantFeatureOptions(this.billingEditorForm.features);
         },
         isPlanEditorDirty() {
             return this.showPlanEditor && this.serializeSnapshot(this.buildPlanComparable()) !== this.planSnapshot;
@@ -261,12 +786,33 @@ const App = {
         isAdminAccountDirty() {
             return this.serializeSnapshot(this.buildAccountComparable()) !== this.accountSnapshot;
         },
+        isTenantEditorDirty() {
+            return this.serializeSnapshot(this.buildTenantComparable()) !== this.tenantSnapshot;
+        },
+        isTeamEditorDirty() {
+            return this.showTeamEditor && this.serializeSnapshot(this.buildTeamComparable()) !== this.teamSnapshot;
+        },
+        isBillingEditorDirty() {
+            return this.showBillingEditor && this.serializeSnapshot(this.buildBillingComparable()) !== this.billingSnapshot;
+        },
         hasUnsavedChanges() {
-            return this.isPlanEditorDirty || this.isDeviceEditorDirty || this.isAdminSettingsDirty || this.isAdminAccountDirty;
+            return (
+                this.isPlanEditorDirty ||
+                this.isDeviceEditorDirty ||
+                this.isAdminSettingsDirty ||
+                this.isAdminAccountDirty ||
+                this.isTenantEditorDirty ||
+                this.isTeamEditorDirty ||
+                this.isBillingEditorDirty
+            );
         },
     },
     watch: {
         showOrdersModal() {
+            if (!this.showOrdersModal) {
+                this.showTrackModal = false;
+                this.activeTrackOrderId = null;
+            }
             this.syncMyOrdersPolling();
         },
         currentUser(value) {
@@ -275,9 +821,28 @@ const App = {
             }
             this.syncMyOrdersPolling();
         },
+        adminTab() {
+            this.persistAdminUiState();
+        },
+        adminOrderFilters: {
+            deep: true,
+            handler() {
+                this.persistAdminUiState();
+            },
+        },
+        auditLogFilters: {
+            deep: true,
+            handler() {
+                this.persistAdminUiState();
+            },
+        },
+        'auditPagination.page_size'() {
+            this.persistAdminUiState();
+        },
     },
     mounted() {
         this.registerImageFallbacks();
+        this.registerViewportMode();
         this.beforeUnloadHandler = (event) => this.handleBeforeUnload(event);
         window.addEventListener('beforeunload', this.beforeUnloadHandler);
         this.initialize();
@@ -288,6 +853,14 @@ const App = {
         }
         if (this.beforeUnloadHandler) {
             window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+        }
+        if (this.compactViewportMediaQuery && this.handleCompactViewportChange) {
+            const mediaQuery = this.compactViewportMediaQuery;
+            if (typeof mediaQuery.removeEventListener === 'function') {
+                mediaQuery.removeEventListener('change', this.handleCompactViewportChange);
+            } else if (typeof mediaQuery.removeListener === 'function') {
+                mediaQuery.removeListener(this.handleCompactViewportChange);
+            }
         }
         if (this.adminWorkflowPollTimer) {
             clearInterval(this.adminWorkflowPollTimer);
@@ -301,6 +874,38 @@ const App = {
     methods: {
         currency: money,
         placeholder,
+        registerViewportMode() {
+            if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+                return;
+            }
+
+            const mediaQuery = window.matchMedia('(max-width: 720px)');
+            this.compactViewportMediaQuery = mediaQuery;
+            this.handleCompactViewportChange = (event) => {
+                this.syncViewportMode(Boolean(event?.matches));
+            };
+            this.syncViewportMode(mediaQuery.matches);
+
+            if (typeof mediaQuery.addEventListener === 'function') {
+                mediaQuery.addEventListener('change', this.handleCompactViewportChange);
+            } else if (typeof mediaQuery.addListener === 'function') {
+                mediaQuery.addListener(this.handleCompactViewportChange);
+            }
+        },
+        syncViewportMode(isCompact = false) {
+            const nextCompact = Boolean(isCompact);
+            if (this.isCompactMobile === nextCompact) {
+                return;
+            }
+            this.isCompactMobile = nextCompact;
+            if (!nextCompact) {
+                this.showAllStorefrontBundles = false;
+                this.showAllStorefrontDevices = false;
+                this.builderMobileStep = 1;
+                return;
+            }
+            this.syncBuilderMobileStep();
+        },
         registerImageFallbacks() {
             this.handleDocumentImageError = (event) => {
                 const target = event.target;
@@ -346,6 +951,10 @@ const App = {
                 admin_account_current_password: false,
                 admin_account_new_password: false,
                 admin_account_confirm_password: false,
+                tenant_admin_password: false,
+                tenant_admin_password_confirm: false,
+                team_member_password: false,
+                team_member_password_confirm: false,
                 logistics_authorization: false,
                 logistics_sign_key: false,
             };
@@ -376,6 +985,551 @@ const App = {
             });
             this.secretFieldVisibility = nextState;
         },
+        adminPermissionEnabled(permissionCode, permissions = null) {
+            const target = String(permissionCode || '').trim().toLowerCase();
+            if (!target) return true;
+            const source = Array.isArray(permissions) ? permissions : Array.isArray(this.currentUser?.permissions) ? this.currentUser.permissions : [];
+            const list = source.map((item) => String(item || '').trim().toLowerCase()).filter(Boolean);
+            if (!list.length) return false;
+            if (list.includes(target) || list.includes('*')) return true;
+            const [namespace] = target.split('.');
+            if (namespace && list.includes(namespace + '.*')) return true;
+            if (target.endsWith('.view') && list.includes(target.replace(/\.view$/, '.manage'))) return true;
+            return false;
+        },
+        tenantFeatureEnabled(featureCode, tenant = null) {
+            const target = String(featureCode || '').trim().toLowerCase();
+            if (!target) return true;
+            const featureList = Array.isArray(tenant?.features)
+                ? tenant.features
+                : Array.isArray(this.currentTenant?.features)
+                  ? this.currentTenant.features
+                  : [];
+            if (!featureList.length) {
+                return true;
+            }
+            return featureList.map((item) => String(item || '').trim().toLowerCase()).includes(target);
+        },
+        tenantFeatureLabels(features = []) {
+            const labels = {
+                storefront: '前台下单',
+                orders: '订单管理',
+                ems: 'EMS面单',
+                printing: '自动打印',
+                tracking: '轨迹同步',
+                batch: '批量处理',
+                analytics: '经营分析',
+            };
+            const list = Array.isArray(features) ? features : [];
+            if (!list.length) {
+                return ['全部功能'];
+            }
+            return list.map((item) => labels[item] || item);
+        },
+        tenantFeatureCatalog() {
+            return {
+                storefront: {
+                    code: 'storefront',
+                    icon: '[S]',
+                    label: '前台下单',
+                    description: '支持用户在前台浏览套餐、选择设备并直接提交订单。',
+                },
+                orders: {
+                    code: 'orders',
+                    icon: '[O]',
+                    label: '订单管理',
+                    description: '支持后台查看订单、改状态、写备注并跟进发货流程。',
+                },
+                ems: {
+                    code: 'ems',
+                    icon: '[E]',
+                    label: 'EMS 面单',
+                    description: '支持对接 EMS 协议客户接口，自动建单并获取电子面单。',
+                },
+                printing: {
+                    code: 'printing',
+                    icon: '[P]',
+                    label: '自动打印',
+                    description: '支持本地打印链路，拿到面单后可直接自动打印。',
+                },
+                tracking: {
+                    code: 'tracking',
+                    icon: '[T]',
+                    label: '轨迹同步',
+                    description: '支持查询物流轨迹，并按计划自动同步最新状态。',
+                },
+                batch: {
+                    code: 'batch',
+                    icon: '[B]',
+                    label: '批量处理',
+                    description: '支持批量建单、批量取面单、批量打印和批量同步轨迹。',
+                },
+                analytics: {
+                    code: 'analytics',
+                    icon: '[A]',
+                    label: '经营分析',
+                    description: '支持查看订单、收入、告警和经营概览等数据。',
+                },
+            };
+        },
+        tenantFeatureItems(features = []) {
+            const catalog = this.tenantFeatureCatalog();
+            const list = Array.isArray(features) ? features : [];
+            if (!list.length) {
+                return [
+                    {
+                        code: 'all',
+                        icon: '[ALL]',
+                        label: '全部功能',
+                        description: '当前租户未单独限制授权功能，默认可使用完整的前台和后台能力。',
+                    },
+                ];
+            }
+            return list.map((item) => {
+                const code = String(item || '').trim();
+                return (
+                    catalog[code] || {
+                        code,
+                        icon: '[+]',
+                        label: code || '自定义功能',
+                        description: '已开通该自定义授权功能。',
+                    }
+                );
+            });
+        },
+        tenantFeatureTooltip(feature = null) {
+            if (!feature) return '';
+            return [feature.label, feature.description].filter(Boolean).join(' - ');
+        },
+        buildTenantFeatureOptions(extraFeatures = []) {
+            const catalog = this.tenantFeatureCatalog();
+            const knownCodes = Object.keys(catalog);
+            const extraCodes = Array.from(new Set((Array.isArray(extraFeatures) ? extraFeatures : []).map((item) => String(item || '').trim().toLowerCase()).filter(Boolean))).filter(
+                (code) => !knownCodes.includes(code),
+            );
+            return [...knownCodes, ...extraCodes].map(
+                (code) =>
+                    catalog[code] || {
+                        code,
+                        icon: '[+]',
+                        label: code || '自定义功能',
+                        description: '已开通该自定义授权功能。',
+                    },
+            );
+        },
+        normalizeTenantFeatureSelection(features = [], fallbackValue = []) {
+            const source = Array.isArray(features) && features.length ? features : Array.isArray(fallbackValue) ? fallbackValue : [];
+            const orderMap = new Map(this.buildTenantFeatureOptions(source).map((item, index) => [item.code, index]));
+            return Array.from(new Set(source.map((item) => String(item || '').trim().toLowerCase()).filter(Boolean))).sort((left, right) => {
+                const leftOrder = orderMap.has(left) ? orderMap.get(left) : Number.MAX_SAFE_INTEGER;
+                const rightOrder = orderMap.has(right) ? orderMap.get(right) : Number.MAX_SAFE_INTEGER;
+                return leftOrder - rightOrder || left.localeCompare(right, 'zh-CN');
+            });
+        },
+        resetTenantFeaturesToDefault() {
+            this.tenantEditorForm.features = this.normalizeTenantFeatureSelection(Object.keys(this.tenantFeatureCatalog()));
+        },
+        resetBillingFeaturesToDefault() {
+            this.billingEditorForm.features = this.normalizeTenantFeatureSelection(Object.keys(this.tenantFeatureCatalog()));
+        },
+        clearBillingFeatureOverride() {
+            this.billingEditorForm.features = [];
+        },
+        billingKindLabel(kind = '') {
+            const labels = {
+                renewal: '续费',
+                trial: '试用',
+                manual_adjustment: '手工调整',
+                license_order: '授权订单',
+            };
+            return labels[String(kind || '').trim()] || kind || '未命名';
+        },
+        billingStatusLabel(status = '') {
+            const labels = {
+                pending: '待应用',
+                applied: '已应用',
+                cancelled: '已取消',
+                failed: '失败',
+            };
+            return labels[String(status || '').trim()] || status || '未命名';
+        },
+        tenantDomainCollections(tenant = null) {
+            const target = tenant || {};
+            const storefront = Array.from(
+                new Set([target?.primary_domain, ...(Array.isArray(target?.domain_bindings) ? target.domain_bindings : [])].filter(Boolean)),
+            );
+            const admin = Array.from(
+                new Set([target?.primary_admin_domain, ...(Array.isArray(target?.admin_domain_bindings) ? target.admin_domain_bindings : [])].filter(Boolean)),
+            );
+            return {
+                storefront,
+                admin,
+                all: Array.from(new Set([...storefront, ...admin])),
+            };
+        },
+        tenantDomainSummaryText(tenant = null) {
+            const domains = this.tenantDomainCollections(tenant);
+            if (!domains.all.length) {
+                return '当前还没有绑定独立域名，默认使用系统路径访问。';
+            }
+            const parts = [];
+            if (domains.storefront.length) {
+                parts.push(`前台 ${domains.storefront.join(' / ')}`);
+            }
+            if (domains.admin.length) {
+                parts.push(`后台 ${domains.admin.join(' / ')}`);
+            }
+            return parts.join(' / ');
+        },
+        tenantSenderSummaryText(tenant = null) {
+            const target = tenant || {};
+            const parts = [target?.sender_name, target?.sender_phone].filter(Boolean);
+            if (!parts.length) {
+                return '当前还没有补齐寄件人姓名和电话。';
+            }
+            return parts.join(' / ');
+        },
+        tenantConfigHealthItems(tenant = null) {
+            const list = Array.isArray(tenant?.config_health?.items) ? tenant.config_health.items : [];
+            return list.map((item) => ({
+                ...item,
+                status_label: item?.ok ? '已完成' : '待完善',
+                value_text: this.tenantConfigHealthValueText(item, tenant),
+            }));
+        },
+        tenantConfigMissingItems(tenant = null) {
+            return this.tenantConfigHealthItems(tenant).filter((item) => !item.ok);
+        },
+        tenantConfigHealthValueText(item = {}, tenant = null) {
+            const key = String(item?.key || '').trim();
+            const target = tenant || {};
+            if (key === 'domains') {
+                return this.tenantDomainSummaryText(target) || item?.hint || '可为租户绑定前台或后台独立域名。';
+            }
+            if (key === 'sender_profile') {
+                const senderSummary = this.tenantSenderSummaryText(target);
+                if (target?.sender_address) {
+                    return `${senderSummary} / ${target.sender_address}`;
+                }
+                return senderSummary || item?.hint || '请先配置寄件人姓名、电话和地址。';
+            }
+            if (key === 'admin') {
+                return target?.admin_username ? `主管理员：${target.admin_username}` : item?.hint || '建议至少保留一个启用中的主管理员账号。';
+            }
+            if (item?.ok) {
+                return item?.hint || '已完成该项配置。';
+            }
+            return item?.hint || '请尽快补齐该项配置。';
+        },
+        isTenantDomainDiagnosticsLoading(tenantId = 0) {
+            return this.tenantDomainDiagnosticsLoadingIds.includes(Number(tenantId) || 0);
+        },
+        setTenantDomainDiagnosticsLoading(tenantId = 0, active = false) {
+            const id = Number(tenantId) || 0;
+            if (!id) return;
+            if (active) {
+                if (!this.tenantDomainDiagnosticsLoadingIds.includes(id)) {
+                    this.tenantDomainDiagnosticsLoadingIds = [...this.tenantDomainDiagnosticsLoadingIds, id];
+                }
+                return;
+            }
+            this.tenantDomainDiagnosticsLoadingIds = this.tenantDomainDiagnosticsLoadingIds.filter((item) => item !== id);
+        },
+        tenantDomainDiagnosticsFor(tenant = null) {
+            const tenantId = Number(tenant?.id || 0);
+            if (!tenantId) return null;
+            return this.tenantDomainDiagnosticsMap[tenantId] || null;
+        },
+        domainDiagnosticTone(check = {}) {
+            const tone = String(check?.tone || '').trim();
+            if (['success', 'warning', 'danger', 'muted'].includes(tone)) {
+                return tone;
+            }
+            return 'muted';
+        },
+        domainDiagnosticStatusText(check = {}) {
+            const tone = this.domainDiagnosticTone(check);
+            if (tone === 'success') return '正常';
+            if (tone === 'warning') return '待处理';
+            if (tone === 'danger') return '异常';
+            return '未配置';
+        },
+        async fetchCurrentTenantDomainDiagnostics() {
+            if (!this.adminPermissionEnabled('dashboard.view') || this.savingStates.domainDiagnostics) return;
+            this.setSavingState('domainDiagnostics', true);
+            try {
+                const { data } = await api.get('/admin/domain-diagnostics');
+                this.currentTenantDomainDiagnostics = data;
+            } catch (error) {
+                this.toastMessage(this.errorMessage(error));
+            } finally {
+                this.setSavingState('domainDiagnostics', false);
+            }
+        },
+        async fetchTenantDomainDiagnostics(tenant = null) {
+            const tenantId = Number(tenant?.id || 0);
+            if (!tenantId || !this.isPlatformAdmin || !this.adminPermissionEnabled('platform.manage')) return;
+            if (this.isTenantDomainDiagnosticsLoading(tenantId)) return;
+            this.setTenantDomainDiagnosticsLoading(tenantId, true);
+            try {
+                const { data } = await api.get(`/admin/platform/tenants/${tenantId}/domain-diagnostics`);
+                this.tenantDomainDiagnosticsMap = {
+                    ...this.tenantDomainDiagnosticsMap,
+                    [tenantId]: data,
+                };
+            } catch (error) {
+                this.toastMessage(this.errorMessage(error));
+            } finally {
+                this.setTenantDomainDiagnosticsLoading(tenantId, false);
+            }
+        },
+        tenantLimitText(item) {
+            if (!item) return '未设置';
+            if (item.unlimited) return `${item.used} / 不限`;
+            return `${item.used} / ${item.limit}`;
+        },
+        tenantExpiryText(tenant = null) {
+            const target = tenant || this.currentTenant || {};
+            if (!target?.expires_at) {
+                return '长期有效';
+            }
+            const days = Number(target.expiring_in_days);
+            if (!Number.isFinite(days)) {
+                return `到期 ${target.expires_at}`;
+            }
+            if (days < 0) {
+                return `已到期 ${Math.abs(days)} 天`;
+            }
+            if (days === 0) {
+                return '今天到期';
+            }
+            return `${days} 天后到期`;
+        },
+        permissionLabel(permission) {
+            const code = typeof permission === 'string' ? permission : permission?.code || '';
+            const labels = {
+                'dashboard.view': '查看概览',
+                'catalog.manage': '管理商品',
+                'orders.manage': '管理订单',
+                'logistics.manage': '管理物流',
+                'tenant.settings': '店铺设置',
+                'account.manage': '账号安全',
+                'team.manage': '团队权限',
+                'platform.manage': '平台租户',
+                'billing.manage': '授权计费',
+            };
+            return typeof permission === 'object' && permission?.label ? permission.label : labels[code] || code || '未命名权限';
+        },
+        permissionDescription(permission) {
+            if (typeof permission === 'object' && permission?.description) {
+                return permission.description;
+            }
+            const descriptions = {
+                'dashboard.view': '查看经营概览、告警和报表。',
+                'catalog.manage': '维护套餐、设备和库存。',
+                'orders.manage': '处理订单状态与付款审核。',
+                'logistics.manage': '执行 EMS 建单、打印和轨迹同步。',
+                'tenant.settings': '编辑当前租户的店铺配置。',
+                'account.manage': '修改管理员账号与密码。',
+                'team.manage': '创建团队成员并分配角色。',
+                'platform.manage': '管理平台租户与域名绑定。',
+                'billing.manage': '处理试用、续费和授权记录。',
+            };
+            const code = typeof permission === 'string' ? permission : permission?.code || '';
+            return descriptions[code] || '';
+        },
+        normalizeTeamPermissionSelection(permissions = []) {
+            const orderMap = new Map(this.teamPermissionOptions.map((item, index) => [item.code, index]));
+            return Array.from(new Set((Array.isArray(permissions) ? permissions : []).map((item) => String(item || '').trim()).filter(Boolean))).sort((left, right) => {
+                const leftOrder = orderMap.has(left) ? orderMap.get(left) : Number.MAX_SAFE_INTEGER;
+                const rightOrder = orderMap.has(right) ? orderMap.get(right) : Number.MAX_SAFE_INTEGER;
+                return leftOrder - rightOrder || left.localeCompare(right, 'zh-CN');
+            });
+        },
+        resetTeamPermissionsToRole() {
+            const matchedRole = this.teamRoleOptions.find((item) => item.code === this.teamEditorForm.role);
+            this.teamEditorForm.permissions = this.normalizeTeamPermissionSelection(matchedRole?.permissions || []);
+        },
+        tenantConfigHealth(tenant = null) {
+            return tenant?.config_health || this.adminDashboard?.tenant?.config_health || null;
+        },
+        tenantConfigHealthText(tenant = null) {
+            const health = this.tenantConfigHealth(tenant);
+            if (!health) return '未检测';
+            return `${health.score || 0} 分 / ${health.completed_count || 0}/${health.total_count || 0}`;
+        },
+        tenantConfigHealthTone(tenant = null) {
+            const health = this.tenantConfigHealth(tenant);
+            if (!health) return 'muted';
+            if ((health.missing_count || 0) >= 3) return 'danger';
+            if ((health.missing_count || 0) > 0) return 'warning';
+            return 'success';
+        },
+        dashboardSeriesMax(series = []) {
+            const values = (Array.isArray(series) ? series : []).map((item) => Number(item?.value || 0));
+            const maxValue = Math.max(...values, 0);
+            return maxValue > 0 ? maxValue : 1;
+        },
+        dashboardBarStyle(item, maxValue) {
+            const currentValue = Number(item?.value || 0);
+            const percent = Math.max(6, Math.round((currentValue / Math.max(1, Number(maxValue) || 1)) * 100));
+            return {
+                width: `${Math.min(100, percent)}%`,
+            };
+        },
+        orderLogisticsStage(order) {
+            const stage = order?.logistics_stage || order?.order_structure?.logistics?.stage;
+            if (stage?.label) {
+                return stage;
+            }
+            if (!this.trackingNumber(order)) {
+                return { code: 'pending_waybill', label: '待出单', tone: 'muted', description: '商家还未生成物流单号。' };
+            }
+            if (order?.ems?.printed_at) {
+                return { code: 'printed', label: '已打印', tone: 'accent', description: '面单已打印，等待揽收或更新轨迹。' };
+            }
+            return { code: 'waybill_created', label: '已出单', tone: 'info', description: '物流单号已生成。' };
+        },
+        orderEmsSummaryItems(order) {
+            const trackingNumber = this.trackingNumber(order);
+            const stage = this.orderLogisticsStage(order);
+            const nextAction = order?.ems_next_action || {};
+            const printLabel = order?.ems?.printed_at ? '已打印' : order?.ems?.print_attempted_at ? '待确认' : '未打印';
+            const printTone = order?.ems?.printed_at ? 'success' : order?.ems?.print_attempted_at ? 'warning' : 'muted';
+
+            return [
+                { key: 'stage', label: '阶段', value: stage?.label || '待处理', tone: stage?.tone || 'muted' },
+                { key: 'waybill', label: '单号', value: trackingNumber || '未生成', tone: trackingNumber ? 'success' : 'muted' },
+                { key: 'print', label: '打印', value: printLabel, tone: printTone },
+                {
+                    key: 'track',
+                    label: '轨迹',
+                    value: this.formatTrackSyncAge(order?.ems?.last_track_sync_at),
+                    tone: order?.ems?.last_track_sync_at ? 'info' : 'muted',
+                },
+                {
+                    key: 'next',
+                    label: '下一步',
+                    value: nextAction?.label || (order?.ems?.last_error ? '处理异常' : '待处理'),
+                    tone: order?.ems?.last_error ? 'danger' : nextAction?.label ? 'accent' : 'muted',
+                },
+            ];
+        },
+        orderNeedsPrintConfirmation(order) {
+            return Boolean(order?.ems?.print_attempted_at && !order?.ems?.printed_at);
+        },
+        orderPrintConfirmationHint(order) {
+            if (!order) return '面单发起打印后，请核对打印结果。';
+            const printMessage = String(order?.ems?.print_message || '').trim();
+            if (printMessage) {
+                return printMessage;
+            }
+            if (order?.ems?.label_file) {
+                return '当前订单已发起打印，但后台还未确认成功。你可以重新打开 PDF 面单核对，确认无误后点“确认已打印”。';
+            }
+            return '当前订单已发起打印，但后台还未确认成功，请核对打印机状态后再确认。';
+        },
+        trackQueryUrl(order) {
+            const trackingNumber = this.trackingNumber(order);
+            const template = String(this.settings?.logistics?.track_query_url_template || '').trim();
+            if (!trackingNumber || !template) return '';
+            return template
+                .replace(/\{\{\s*tracking_number\s*\}\}/gi, encodeURIComponent(trackingNumber))
+                .replace(/\{\s*tracking_number\s*\}/gi, encodeURIComponent(trackingNumber))
+                .replace(/%tracking_number%/gi, encodeURIComponent(trackingNumber));
+        },
+        openTrackingQuery(order) {
+            const url = this.trackQueryUrl(order);
+            if (!url) {
+                this.toastMessage('当前未配置官网查询地址模板');
+                return;
+            }
+            window.open(url, '_blank', 'noopener');
+        },
+        alertSeverityText(alert = {}) {
+            const severity = String(alert?.severity || '').trim();
+            if (severity === 'danger') return '高优先级';
+            if (severity === 'warning') return '需关注';
+            return '提示';
+        },
+        auditStatusText(status = '') {
+            const value = String(status || '').trim();
+            if (value === 'error') return '失败';
+            if (value === 'warning') return '告警';
+            if (value === 'info') return '提示';
+            return '成功';
+        },
+        auditCategoryText(log = {}) {
+            return log?.category_label || log?.category || '其他';
+        },
+        auditTargetText(log = {}) {
+            return log?.target_label || log?.target_key || log?.action || '未指定对象';
+        },
+        auditTenantText(log = {}) {
+            return log?.target_tenant_name || log?.tenant_name || log?.target_tenant_code || log?.tenant_code || '当前租户';
+        },
+        async openAuditLogTarget(log = {}) {
+            const targetType = String(log?.target_type || '').trim();
+            if (targetType === 'order' && this.adminPermissionEnabled('orders.manage')) {
+                this.adminOrderFilters.q = log?.target_key || '';
+                this.adminOrderFilters.status = 'all';
+                this.adminOrderFilters.flow_type = 'all';
+                this.setAdminTab('orders');
+                await this.fetchAdminOrders();
+                return;
+            }
+            if (targetType === 'tenant' && this.isPlatformAdmin && this.adminPermissionEnabled('platform.manage')) {
+                this.setAdminTab('platform');
+                await this.fetchPlatformTenants();
+                return;
+            }
+            if (targetType === 'billing_record' && this.isPlatformAdmin && this.adminPermissionEnabled('billing.manage')) {
+                this.setAdminTab('billing');
+                await this.fetchPlatformBillingRecords();
+                return;
+            }
+            if (targetType === 'team_member' && this.adminPermissionEnabled('team.manage')) {
+                this.setAdminTab('team');
+                await this.fetchTeamMembers();
+                return;
+            }
+            if (['store_settings', 'payment_qr'].includes(targetType) && this.adminPermissionEnabled('tenant.settings')) {
+                this.setAdminTab('settings');
+                return;
+            }
+            if (targetType === 'logistics_settings' && this.adminPermissionEnabled('logistics.manage')) {
+                this.setAdminTab('logistics');
+                return;
+            }
+            this.toastMessage('当前日志没有可直接跳转的目标页');
+        },
+        async openAdminOrderFromDashboard(problem = {}) {
+            if (!this.adminPermissionEnabled('orders.manage')) {
+                this.toastMessage('当前账号没有订单权限');
+                return;
+            }
+            this.adminOrderFilters.q = String(problem?.order_no || problem?.waybill_no || problem?.customer_phone || '').trim();
+            this.adminOrderFilters.status = 'all';
+            this.adminOrderFilters.flow_type = 'all';
+            this.setAdminTab('orders');
+            await this.fetchAdminOrders();
+        },
+        topItemCaption(item = {}) {
+            return `${item.order_count || 0} 单 / ${this.currency(item.revenue || 0)}`;
+        },
+        userTrackHeadline(order) {
+            if (!this.trackingNumber(order)) return this.orderLogisticsStage(order).label || '待出单';
+            const latest = this.latestTrackItem(order);
+            return latest?.op_name || latest?.op_desc || this.orderLogisticsStage(order).label || '物流轨迹已更新';
+        },
+        userTrackDescription(order) {
+            const stage = this.orderLogisticsStage(order);
+            if (!this.trackingNumber(order)) return stage.description || '商家出单后会在这里展示 EMS 单号和最新轨迹。';
+            if (order?.ems?.track_summary) return order.ems.track_summary;
+            if (stage?.description) return stage.description;
+            if (this.settings?.logistics?.auto_sync_tracks) return '后台会自动同步 EMS 轨迹，你也可以手动刷新。';
+            return '可以复制单号、打开官网查询或手动刷新轨迹。';
+        },
         buildSettingsComparable() {
             return {
                 ...this.adminSettingsForm,
@@ -385,6 +1539,24 @@ const App = {
         },
         buildAccountComparable() {
             return { ...this.adminAccountForm };
+        },
+        buildTenantComparable() {
+            return {
+                ...this.tenantEditorForm,
+                features: this.normalizeTenantFeatureSelection(this.tenantEditorForm.features),
+            };
+        },
+        buildTeamComparable() {
+            return {
+                ...this.teamEditorForm,
+                permissions: this.normalizeTeamPermissionSelection(this.teamEditorForm.permissions),
+            };
+        },
+        buildBillingComparable() {
+            return {
+                ...this.billingEditorForm,
+                features: this.normalizeTenantFeatureSelection(this.billingEditorForm.features),
+            };
         },
         buildPlanComparable() {
             return {
@@ -404,6 +1576,15 @@ const App = {
         },
         rememberAccountSnapshot() {
             this.accountSnapshot = this.serializeSnapshot(this.buildAccountComparable());
+        },
+        rememberTenantSnapshot() {
+            this.tenantSnapshot = this.serializeSnapshot(this.buildTenantComparable());
+        },
+        rememberTeamSnapshot() {
+            this.teamSnapshot = this.serializeSnapshot(this.buildTeamComparable());
+        },
+        rememberBillingSnapshot() {
+            this.billingSnapshot = this.serializeSnapshot(this.buildBillingComparable());
         },
         rememberPlanSnapshot() {
             this.planSnapshot = this.serializeSnapshot(this.buildPlanComparable());
@@ -426,6 +1607,93 @@ const App = {
             }
             this.savingOrderIds = this.savingOrderIds.filter((id) => id !== orderId);
         },
+        defaultAdminOrderFilters() {
+            return { q: '', status: 'pending_payment_review', flow_type: 'all', date_from: '', date_to: '' };
+        },
+        safeLocalStorageGet(key) {
+            if (!key || typeof window === 'undefined' || !window.localStorage) return null;
+            try {
+                return window.localStorage.getItem(key);
+            } catch (error) {
+                return null;
+            }
+        },
+        safeLocalStorageSet(key, value) {
+            if (!key || typeof window === 'undefined' || !window.localStorage) return;
+            try {
+                window.localStorage.setItem(key, value);
+            } catch (error) {
+                // Ignore quota and privacy-mode failures.
+            }
+        },
+        storefrontLoginPhoneStorageKey() {
+            const tenantCode = this.currentTenant?.code || resolveTenantCode() || 'default';
+            return `iot-mall:storefront-login-phone:${tenantCode}`;
+        },
+        rememberStorefrontLoginPhone(phone = this.currentUser?.phone || this.loginPhone) {
+            const normalizedPhone = String(phone || '').trim();
+            if (!/^1[3-9]\d{9}$/.test(normalizedPhone)) return '';
+            this.safeLocalStorageSet(this.storefrontLoginPhoneStorageKey(), normalizedPhone);
+            return normalizedPhone;
+        },
+        restoreStorefrontLoginPhone() {
+            const currentPhone = String(this.currentUser?.phone || '').trim();
+            if (/^1[3-9]\d{9}$/.test(currentPhone)) {
+                this.loginPhone = currentPhone;
+                this.rememberStorefrontLoginPhone(currentPhone);
+                return currentPhone;
+            }
+
+            const savedPhone = String(this.safeLocalStorageGet(this.storefrontLoginPhoneStorageKey()) || '').trim();
+            if (/^1[3-9]\d{9}$/.test(savedPhone)) {
+                this.loginPhone = this.loginPhone || savedPhone;
+                return savedPhone;
+            }
+
+            return '';
+        },
+        adminUiStateStorageKey() {
+            const tenantCode = this.currentTenant?.code || resolveTenantCode() || 'default';
+            const userId = this.currentUser?.id || this.currentUser?.username || 'guest';
+            return `iot-mall:admin-ui:${tenantCode}:${userId}`;
+        },
+        persistAdminUiState() {
+            if (!this.currentUser || !this.isAdmin) return;
+            const payload = {
+                adminTab: this.adminTab,
+                adminOrderFilters: this.normalizeAdminOrderFilters(),
+                auditLogFilters: this.normalizeAuditLogFilters(),
+                auditPageSize: Number(this.auditPagination.page_size || 20),
+            };
+            this.safeLocalStorageSet(this.adminUiStateStorageKey(), JSON.stringify(payload));
+        },
+        restoreAdminUiState() {
+            if (!this.currentUser || !this.isAdmin) return;
+            const raw = this.safeLocalStorageGet(this.adminUiStateStorageKey());
+            if (!raw) return;
+            try {
+                const payload = JSON.parse(raw) || {};
+                if (typeof payload.adminTab === 'string' && payload.adminTab.trim()) {
+                    this.adminTab = payload.adminTab.trim();
+                }
+                if (payload.adminOrderFilters && typeof payload.adminOrderFilters === 'object') {
+                    this.adminOrderFilters = {
+                        ...this.defaultAdminOrderFilters(),
+                        ...payload.adminOrderFilters,
+                    };
+                }
+                if (payload.auditLogFilters && typeof payload.auditLogFilters === 'object') {
+                    this.auditLogFilters = {
+                        ...this.auditLogFilters,
+                        ...payload.auditLogFilters,
+                    };
+                }
+                const nextPageSize = Number(payload.auditPageSize || this.auditPagination.page_size || 20);
+                this.auditPagination.page_size = Number.isFinite(nextPageSize) && nextPageSize > 0 ? nextPageSize : 20;
+            } catch (error) {
+                // Ignore malformed saved UI state.
+            }
+        },
         normalizeAdminOrderFilters() {
             const nextFilters = { ...this.adminOrderFilters };
             if (nextFilters.date_from && nextFilters.date_to && nextFilters.date_from > nextFilters.date_to) {
@@ -434,6 +1702,45 @@ const App = {
                 this.adminOrderFilters.date_to = nextFilters.date_to;
             }
             return nextFilters;
+        },
+        normalizeAuditLogFilters() {
+            const nextFilters = { ...this.auditLogFilters };
+            if (nextFilters.date_from && nextFilters.date_to && nextFilters.date_from > nextFilters.date_to) {
+                [nextFilters.date_from, nextFilters.date_to] = [nextFilters.date_to, nextFilters.date_from];
+                this.auditLogFilters.date_from = nextFilters.date_from;
+                this.auditLogFilters.date_to = nextFilters.date_to;
+            }
+            return nextFilters;
+        },
+        queryAdminAuditLogs() {
+            this.auditPagination.page = 1;
+            return this.fetchAdminAuditLogs({ page: 1 });
+        },
+        resetAdminOrderFilters() {
+            this.adminOrderFilters = this.defaultAdminOrderFilters();
+            return this.fetchAdminOrders();
+        },
+        resetAuditLogFilters() {
+            this.auditLogFilters = {
+                q: '',
+                category: 'all',
+                status: 'all',
+                scope: this.auditScopeOptions.some((item) => item.code === 'current')
+                    ? 'current'
+                    : this.auditScopeOptions[0]?.code || 'current',
+                date_from: '',
+                date_to: '',
+            };
+            this.auditPagination.page = 1;
+            return this.fetchAdminAuditLogs({ page: 1 });
+        },
+        changeAuditLogPage(page) {
+            const nextPage = Math.max(1, Number(page) || 1);
+            if (nextPage === this.auditPagination.page) {
+                return Promise.resolve();
+            }
+            this.auditPagination.page = nextPage;
+            return this.fetchAdminAuditLogs({ page: nextPage });
         },
         handleBeforeUnload(event) {
             if (!this.hasUnsavedChanges) {
@@ -451,8 +1758,17 @@ const App = {
         },
         setAdminTab(nextTab) {
             if (nextTab === this.adminTab) return;
+            const targetTab = this.allAdminTabs.find((tab) => tab.value === nextTab);
+            if (targetTab?.required_feature && !this.tenantFeatureEnabled(targetTab.required_feature)) {
+                this.toastMessage('当前租户未开通该功能');
+                return;
+            }
+            if (targetTab?.required_permission && !this.adminPermissionEnabled(targetTab.required_permission)) {
+                this.toastMessage('当前账号没有该页面权限');
+                return;
+            }
             if (
-                ['settings', 'logistics'].includes(this.adminTab) &&
+                ['settings', 'logistics', 'account'].includes(this.adminTab) &&
                 !this.confirmDiscardSection(
                     this.isAdminSettingsDirty || this.isAdminAccountDirty,
                     '店铺设置或账号安全有未保存的修改，确认切换标签吗',
@@ -460,9 +1776,36 @@ const App = {
             ) {
                 return;
             }
+            if (this.adminTab === 'platform' && !this.confirmDiscardSection(this.isTenantEditorDirty, '租户编辑内容还没有保存，确认切换标签吗？')) {
+                return;
+            }
+            if (this.adminTab === 'team' && !this.confirmDiscardSection(this.isTeamEditorDirty, '团队成员编辑内容还没有保存，确认切换标签吗？')) {
+                return;
+            }
+            if (this.adminTab === 'billing' && !this.confirmDiscardSection(this.isBillingEditorDirty, '计费记录表单还没有保存，确认切换标签吗？')) {
+                return;
+            }
             this.adminTab = nextTab;
-            if (nextTab === 'logistics' && !this.adminEmsDiagnostics) {
+            if (nextTab === 'site' && this.adminPermissionEnabled('dashboard.view')) {
+                this.fetchCurrentTenantDomainDiagnostics();
+            }
+            if (nextTab === 'logistics' && this.tenantFeatureEnabled('ems') && !this.adminEmsDiagnostics) {
                 this.runEmsDiagnostics();
+            }
+            if (nextTab === 'platform' && this.isPlatformAdmin) {
+                this.fetchPlatformTenants();
+            }
+            if (nextTab === 'team') {
+                this.fetchTeamMembers();
+            }
+            if (nextTab === 'billing' && this.isPlatformAdmin) {
+                this.fetchPlatformBillingRecords();
+            }
+            if (nextTab === 'audit') {
+                this.fetchAdminAuditLogs();
+            }
+            if (nextTab === 'account') {
+                this.prepareAdminAccountForm();
             }
         },
         revokeObjectUrl(url) {
@@ -868,6 +2211,27 @@ const App = {
         paymentText(value) {
             return value === 'alipay' ? '支付宝付款' : '微信付款';
         },
+        planDisplayAmount(plan = null) {
+            return Math.max(0, Number(plan?.setup_price || 0));
+        },
+        planSettlementDiscount(plan = null) {
+            return this.planDisplayAmount(plan);
+        },
+        orderPlanDisplayAmount(order = null) {
+            return Math.max(
+                0,
+                Number(order?.pricing?.plan_display_amount ?? order?.plan_snapshot?.setup_price ?? order?.pricing?.plan_amount ?? 0),
+            );
+        },
+        orderPlanDiscountAmount(order = null) {
+            return Math.max(
+                0,
+                Number(
+                    order?.pricing?.plan_discount_amount ??
+                        Math.max(0, this.orderPlanDisplayAmount(order) - Number(order?.pricing?.plan_amount || 0)),
+                ),
+            );
+        },
         insertCardText(value) {
             return (
                 {
@@ -890,7 +2254,7 @@ const App = {
         },
         compatiblePlanCount(device) {
             const compatibleIds = this.getCompatiblePlanIds(device);
-            return compatibleIds.length || this.plans.length;
+            return compatibleIds.length;
         },
         isHotPlan(plan, index = -1) {
             return Number(plan?.hot_rank || 0) > 0 || Boolean(plan?.featured) || (index > -1 && index < 2);
@@ -910,6 +2274,83 @@ const App = {
             if (index === 0) return '适合想省心一步到位的用户，选好设备后直接继续配卡即可';
             if (device?.original_price > device?.price) return '当前有价格展示，更容易让用户直接完成设备配卡下单';
             return '适合看完套餐后直接下单，减少来回咨询和选择成本';
+        },
+        builderStepDefinitions(flowType = this.builderForm.flow_type) {
+            if (flowType === 'ship_device') {
+                return [
+                    { key: 'plan', label: '选择套餐' },
+                    { key: 'contact', label: '填写地址' },
+                    { key: 'ship_device', label: '设备信息' },
+                    { key: 'payment', label: '上传付款截图' },
+                ];
+            }
+            return [
+                { key: 'device', label: '选择设备' },
+                { key: 'plan', label: '选择套餐' },
+                { key: 'contact', label: '填写地址' },
+                { key: 'payment', label: '上传付款截图' },
+            ];
+        },
+        builderStepCompleted(stepKey = '') {
+            switch (String(stepKey || '').trim()) {
+                case 'device':
+                    return Boolean(this.builderForm.device_id);
+                case 'plan':
+                    return Boolean(this.builderForm.plan_id);
+                case 'contact':
+                    return Boolean(
+                        this.builderForm.customer_name &&
+                            /^1[3-9]\d{9}$/.test(this.builderForm.customer_phone) &&
+                            this.builderForm.shipping_address,
+                    );
+                case 'ship_device':
+                    return Boolean(this.builderForm.customer_device_brand || this.builderForm.customer_device_model);
+                case 'payment':
+                    return Boolean(this.paymentProofFile);
+                default:
+                    return false;
+            }
+        },
+        validateBuilderStep(stepKey = '', options = {}) {
+            const silent = Boolean(options.silent);
+            const fail = (message) => {
+                if (!silent) {
+                    this.toastMessage(message);
+                }
+                return false;
+            };
+
+            if (stepKey === 'device' && !this.builderForm.device_id) {
+                return fail('请先选择要配卡的设备');
+            }
+            if (stepKey === 'plan') {
+                if (!this.builderForm.plan_id) {
+                    return fail('请先选择套餐');
+                }
+                if (
+                    this.builderForm.flow_type === 'buy_device' &&
+                    this.selectedDevice &&
+                    this.availablePlansForBuilder.length &&
+                    !this.availablePlansForBuilder.find((plan) => plan.id === this.builderForm.plan_id)
+                ) {
+                    return fail('当前设备不能搭配这个套餐，请重新选择');
+                }
+            }
+            if (stepKey === 'contact') {
+                if (!this.builderForm.customer_name) return fail('请填写联系人姓名');
+                if (!/^1[3-9]\d{9}$/.test(this.builderForm.customer_phone)) return fail('请填写正确的手机号');
+                if (!this.builderForm.shipping_address) {
+                    return fail(this.builderForm.flow_type === 'buy_device' ? '请填写收货地址' : '请填写回寄地址');
+                }
+            }
+            if (stepKey === 'ship_device' && !this.builderForm.customer_device_brand && !this.builderForm.customer_device_model) {
+                return fail('寄设备配卡请至少填写设备品牌或型号');
+            }
+            if (stepKey === 'payment') {
+                if (!this.activePaymentQr) return fail('当前支付方式还没有配置收款码，请联系客服处理');
+                if (!this.paymentProofFile) return fail('请上传付款截图');
+            }
+            return true;
         },
         orderTimeline(order) {
             const map = {
@@ -976,25 +2417,179 @@ const App = {
                 if (!this.builderForm.plan_id) {
                     this.builderForm.plan_id = this.plans[0]?.id || null;
                 }
+                this.syncBuilderPlanCarrierFilter();
+                const filteredPlans = this.filteredAvailablePlansForBuilder;
+                if (filteredPlans.length && !filteredPlans.find((item) => item.id === this.builderForm.plan_id)) {
+                    this.builderForm.plan_id = filteredPlans[0]?.id || null;
+                }
                 return;
             }
             const compatiblePlans = this.availablePlansForBuilder;
             if (!compatiblePlans.length) {
                 this.builderForm.plan_id = null;
+                this.builderPlanCarrierFilter = 'all';
                 return;
             }
             if (!compatiblePlans.find((item) => item.id === this.builderForm.plan_id)) {
                 this.builderForm.plan_id = compatiblePlans[0]?.id || null;
             }
+            this.syncBuilderPlanCarrierFilter();
+            const filteredPlans = this.filteredAvailablePlansForBuilder;
+            if (filteredPlans.length && !filteredPlans.find((item) => item.id === this.builderForm.plan_id)) {
+                this.builderForm.plan_id = filteredPlans[0]?.id || null;
+            }
+        },
+        syncStorefrontPlanSelections() {
+            const availableOptions = this.storefrontPlanCarrierOptions.filter((item) => !item.disabled);
+            if (!availableOptions.length) {
+                this.storefrontPlanCarrierFilter = 'all';
+                this.storefrontSelectedPlanId = null;
+                return;
+            }
+
+            const currentOption = this.storefrontPlanCarrierOptions.find((item) => item.code === this.storefrontPlanCarrierFilter);
+            if (!currentOption || currentOption.disabled) {
+                const preferredPlan =
+                    this.plans.find((item) => item.id === this.storefrontSelectedPlanId) ||
+                    this.plans.find((item) => item.id === this.builderForm.plan_id) ||
+                    this.plans[0] ||
+                    null;
+                const selectedCarrier = this.normalizePlanCarrier(preferredPlan?.carrier);
+                const preferredOption = availableOptions.find((item) => item.code === selectedCarrier && item.code !== 'all');
+                this.storefrontPlanCarrierFilter = preferredOption?.code || 'all';
+            }
+
+            const filteredPlans = this.filteredStorefrontPlans;
+            if (!filteredPlans.length) {
+                this.storefrontSelectedPlanId = null;
+                return;
+            }
+            if (!filteredPlans.find((item) => item.id === this.storefrontSelectedPlanId)) {
+                const preferredPlan = filteredPlans.find((item) => item.id === this.builderForm.plan_id) || filteredPlans[0] || null;
+                this.storefrontSelectedPlanId = preferredPlan?.id || null;
+            }
+        },
+        setStorefrontPlanCarrierFilter(carrierCode = 'all') {
+            const nextCode = String(carrierCode || 'all');
+            const nextOption = this.storefrontPlanCarrierOptions.find((item) => item.code === nextCode);
+            if (!nextOption || nextOption.disabled) {
+                return;
+            }
+
+            this.storefrontPlanCarrierFilter = nextCode;
+            const filteredPlans = this.filteredStorefrontPlans;
+            if (filteredPlans.length && !filteredPlans.find((item) => item.id === this.storefrontSelectedPlanId)) {
+                this.storefrontSelectedPlanId = filteredPlans[0]?.id || null;
+            }
+        },
+        selectStorefrontPlan(plan = null) {
+            if (!plan?.id) return;
+            this.storefrontSelectedPlanId = plan.id;
+        },
+        toggleStorefrontBundleExpansion() {
+            this.showAllStorefrontBundles = !this.showAllStorefrontBundles;
+        },
+        toggleStorefrontDeviceExpansion() {
+            this.showAllStorefrontDevices = !this.showAllStorefrontDevices;
         },
         chooseDevice(deviceId) {
             this.builderForm.device_id = deviceId;
             this.syncBuilderSelections();
         },
+        syncBuilderMobileStep(preferredStep = null) {
+            const maxStep = this.builderStepDefinitions().length || 1;
+            const nextStep = Number(preferredStep ?? this.builderMobileStep ?? 1);
+            if (!Number.isFinite(nextStep)) {
+                this.builderMobileStep = 1;
+                return;
+            }
+            this.builderMobileStep = Math.min(maxStep, Math.max(1, Math.trunc(nextStep)));
+        },
+        isBuilderStepVisible(stepKey = '') {
+            return !this.isCompactMobile || this.builderCurrentStepKey === stepKey;
+        },
+        goBuilderMobileStep(stepNumber) {
+            const nextStep = Math.min(this.builderStepCount, Math.max(1, Number(stepNumber || 1)));
+            if (nextStep === this.builderMobileStep) return;
+            if (nextStep < this.builderMobileStep) {
+                this.builderMobileStep = nextStep;
+                return;
+            }
+            for (let index = this.builderMobileStep; index < nextStep; index += 1) {
+                const currentItem = this.builderStepItems[index - 1];
+                if (!currentItem || !this.validateBuilderStep(currentItem.key)) {
+                    return;
+                }
+            }
+            this.builderMobileStep = nextStep;
+        },
+        goBuilderPrevStep() {
+            if (!this.isCompactMobile) {
+                this.closeBuilder();
+                return;
+            }
+            if (this.builderMobileStep <= 1) {
+                this.closeBuilder();
+                return;
+            }
+            this.builderMobileStep -= 1;
+        },
+        async handleBuilderPrimaryAction() {
+            if (!this.isCompactMobile) {
+                await this.submitOrder();
+                return;
+            }
+            if (this.builderMobileStep >= this.builderStepCount) {
+                await this.submitOrder();
+                return;
+            }
+            if (!this.validateBuilderStep(this.builderCurrentStepKey)) {
+                return;
+            }
+            this.syncBuilderMobileStep(this.builderMobileStep + 1);
+        },
+        normalizePlanCarrier(carrier = '') {
+            const text = String(carrier || '').trim();
+            if (!text) return '其他';
+            if (text.includes('广电')) return '广电';
+            if (text.includes('联通')) return '联通';
+            if (text.includes('电信')) return '电信';
+            if (text.includes('移动')) return '移动';
+            return '其他';
+        },
+        syncBuilderPlanCarrierFilter() {
+            const availableOptions = this.builderPlanCarrierOptions.filter((item) => !item.disabled);
+            if (!availableOptions.length) {
+                this.builderPlanCarrierFilter = 'all';
+                return;
+            }
+            const currentOption = this.builderPlanCarrierOptions.find((item) => item.code === this.builderPlanCarrierFilter);
+            if (currentOption && !currentOption.disabled) {
+                return;
+            }
+
+            const selectedPlan = this.availablePlansForBuilder.find((item) => item.id === this.builderForm.plan_id) || null;
+            const selectedCarrier = this.normalizePlanCarrier(selectedPlan?.carrier);
+            const preferredOption = availableOptions.find((item) => item.code === selectedCarrier && item.code !== 'all');
+            this.builderPlanCarrierFilter = preferredOption?.code || 'all';
+        },
+        setBuilderPlanCarrierFilter(carrierCode = 'all') {
+            const nextCode = String(carrierCode || 'all');
+            const nextOption = this.builderPlanCarrierOptions.find((item) => item.code === nextCode);
+            if (!nextOption || nextOption.disabled) {
+                return;
+            }
+
+            this.builderPlanCarrierFilter = nextCode;
+            const filteredPlans = this.filteredAvailablePlansForBuilder;
+            if (filteredPlans.length && !filteredPlans.find((item) => item.id === this.builderForm.plan_id)) {
+                this.builderForm.plan_id = filteredPlans[0]?.id || null;
+            }
+        },
         handleQuickPlanTouch(plan) {
             const now = Date.now();
             const isDoubleTap = this.lastQuickPlanTouch.planId === plan.id && now - this.lastQuickPlanTouch.time < 320;
-            this.builderForm.plan_id = plan.id;
+            this.storefrontSelectedPlanId = plan.id;
             if (isDoubleTap) {
                 this.previewImage(this.planImage(plan));
                 this.lastQuickPlanTouch = { planId: null, time: 0 };
@@ -1005,7 +2600,7 @@ const App = {
         deviceCompatibilityText(device) {
             const compatibleIds = this.getCompatiblePlanIds(device);
             if (!compatibleIds.length) {
-                return '支持全部上架套餐配卡';
+                return '未勾选可配套餐，当前设备不会在前台展示可配套餐';
             }
             const names = this.plans
                 .filter((plan) => compatibleIds.includes(plan.id))
@@ -1013,6 +2608,32 @@ const App = {
                 .map((plan) => plan.name);
             const suffix = compatibleIds.length > names.length ? ` 等 ${compatibleIds.length} 个套餐` : '';
             return '可配套餐：' + names.join(' / ') + suffix;
+        },
+        allowOrderDeviceShipmentUpdate(order) {
+            return Boolean(order?.can_update_device_shipment && order?.flow_type === 'ship_device');
+        },
+        availableDropshipTargets(_order) {
+            const currentTenantId = Number(this.currentTenant?.id || 0);
+            return (this.platformTenants || []).filter((tenant) => Number(tenant.id || 0) !== currentTenantId);
+        },
+        buildAdminOrderDispatchInfo(order) {
+            const deviceText = order?.device_snapshot
+                ? `${order.device_snapshot.name || ''}${order.quantity > 1 ? ` x${order.quantity}` : ''}`
+                : [order?.device_submission?.brand, order?.device_submission?.model].filter(Boolean).join(' / ') || '用户寄设备';
+            const outboundInfo = [order?.device_submission?.outbound_company, order?.device_submission?.outbound_tracking]
+                .filter(Boolean)
+                .join(' / ');
+            return [
+                `订单号：${order?.order_no || ''}`,
+                `下单方式：${this.flowTypeText(order?.flow_type)}`,
+                `客户：${order?.customer_name || ''}`,
+                `电话：${order?.customer_phone || ''}`,
+                `套餐：${order?.plan_snapshot?.name || ''}`,
+                `设备：${deviceText}`,
+                `地址：${order?.shipping_address || ''}`,
+                `客户寄出：${outboundInfo || '未填写'}`,
+                `备注：${order?.remark || order?.admin_note || '无'}`,
+            ].join('\n');
         },
         previewImage(url) {
             if (!url) return;
@@ -1097,9 +2718,30 @@ const App = {
         },
         clearAdminOrderSelection() {
             this.selectedAdminOrderIds = [];
+            this.adminBatchStatus = '';
         },
         selectedAdminOrders() {
             return this.adminOrders.filter((order) => this.selectedAdminOrderIds.includes(order.id));
+        },
+        openAdminDeleteModal(target) {
+            const orderIds = (Array.isArray(target) ? target : [target])
+                .map((item) => (typeof item === 'object' && item ? Number(item.id || 0) : Number(item || 0)))
+                .filter((item) => Number.isFinite(item) && item > 0);
+            const uniqueIds = Array.from(new Set(orderIds));
+            if (!uniqueIds.length) {
+                this.toastMessage('请先选择要删除的订单');
+                return;
+            }
+            this.adminDeleteOrderIds = uniqueIds;
+            this.showAdminDeleteModal = true;
+        },
+        closeAdminDeleteModal(force = false) {
+            if (!force && this.savingStates.deleteOrders) return;
+            this.showAdminDeleteModal = false;
+            this.adminDeleteOrderIds = [];
+        },
+        openBatchDeleteAdminOrders() {
+            this.openAdminDeleteModal(this.selectedAdminOrders());
         },
         getAdminOrderById(orderId) {
             return this.adminOrders.find((order) => order.id === orderId) || null;
@@ -1457,6 +3099,30 @@ const App = {
                 String(right.op_time || '').localeCompare(String(left.op_time || '')),
             );
             return list[0] || null;
+        },
+        openMyOrderTrackModal(order) {
+            if (!order || !this.trackingNumber(order)) {
+                this.toastMessage('当前订单还没有物流单号');
+                return;
+            }
+            this.activeTrackOrderId = order.id;
+            this.showTrackModal = true;
+        },
+        closeMyOrderTrackModal() {
+            this.showTrackModal = false;
+            this.activeTrackOrderId = null;
+        },
+        openAdminOrderTrackModal(order) {
+            if (!order || !this.trackingNumber(order)) {
+                this.toastMessage('当前订单还没有物流单号');
+                return;
+            }
+            this.activeAdminTrackOrderId = order.id;
+            this.showAdminTrackModal = true;
+        },
+        closeAdminTrackModal() {
+            this.showAdminTrackModal = false;
+            this.activeAdminTrackOrderId = null;
         },
         userNoticeCenter(order) {
             const center = order?.user_notice_center;
@@ -1952,12 +3618,17 @@ const App = {
             }
             this.revokeObjectUrl(this.paymentProofPreview);
             this.builderForm = next;
+            this.builderPlanCarrierFilter = 'all';
+            this.builderMobileStep = 1;
             this.paymentProofFile = null;
             this.paymentProofPreview = null;
+            this.syncBuilderSelections();
         },
         async initialize() {
             try {
                 await Promise.all([this.fetchStorefront(), this.checkLogin()]);
+                this.restoreStorefrontLoginPhone();
+                this.restoreAdminUiState();
                 this.resetBuilder();
                 if (this.isAdminEntry) {
                     if (this.isAdmin) {
@@ -1965,6 +3636,8 @@ const App = {
                     } else {
                         this.showLoginModal = true;
                     }
+                } else if (!this.currentUser && !this.loginPhone) {
+                    this.showLoginModal = true;
                 }
             } catch (error) {
                 this.toastMessage(this.errorMessage(error));
@@ -1972,6 +3645,10 @@ const App = {
         },
         async fetchStorefront() {
             const { data } = await api.get('/storefront');
+            this.currentTenant = {
+                ...(this.currentTenant || {}),
+                ...(data.tenant || {}),
+            };
             this.settings = data.settings;
             this.plans = data.plans || [];
             this.devices = data.devices || [];
@@ -1983,15 +3660,17 @@ const App = {
                 this.builderForm.device_id = this.devices[0]?.id || null;
             }
             this.syncBuilderSelections();
+            this.syncStorefrontPlanSelections();
         },
         async checkLogin() {
-            const token = localStorage.getItem('token');
+            const token = getTenantToken(resolveTenantCode());
             if (!token) return;
             try {
                 const { data } = await api.get('/auth/me');
                 this.currentUser = data;
+                this.rememberStorefrontLoginPhone(data?.phone);
             } catch (error) {
-                localStorage.removeItem('token');
+                clearTenantToken(resolveTenantCode());
                 this.currentUser = null;
             }
         },
@@ -2025,8 +3704,9 @@ const App = {
                     }
                     ({ data } = await api.post('/auth/login', { phone: this.loginPhone }));
                 }
-                localStorage.setItem('token', data.token);
+                setTenantToken(data.token, data.user?.tenant_code || resolveTenantCode());
                 this.currentUser = data.user;
+                this.rememberStorefrontLoginPhone(data.user?.phone || this.loginPhone);
                 this.loginPhone = '';
                 this.adminUsername = '';
                 this.adminPassword = '';
@@ -2038,6 +3718,7 @@ const App = {
                         this.toastMessage('当前账号没有后台权限');
                         return;
                     }
+                    this.restoreAdminUiState();
                     await this.openAdmin();
                 } else {
                     this.toastMessage('登录成功');
@@ -2047,21 +3728,31 @@ const App = {
             }
         },
         logout() {
-            localStorage.removeItem('token');
+            clearTenantToken(resolveTenantCode());
             this.currentUser = null;
             this.adminUsername = '';
             this.adminPassword = '';
             this.loginPhone = '';
+            this.currentTenantDomainDiagnostics = null;
+            this.tenantDomainDiagnosticsMap = {};
+            this.tenantDomainDiagnosticsLoadingIds = [];
+            this.adminLastRefreshedAt = null;
+            this.adminOrdersLastFetchedAt = null;
+            this.adminAuditLastFetchedAt = null;
             this.resetSecretFieldVisibility();
             this.isAdminView = false;
             this.showOrdersModal = false;
+            this.showShipAddressPrompt = false;
+            this.shipAddressPromptOrderNo = '';
             this.showLoginModal = this.isAdminEntry;
+            this.restoreStorefrontLoginPhone();
             this.toastMessage('已退出登录');
             this.resetBuilder();
         },
         openBuilder(flowType, options = {}) {
             this.showBuilder = true;
             this.builderForm.flow_type = flowType;
+            this.builderMobileStep = 1;
             if (flowType === 'buy_device') {
                 this.builderForm.device_id = options.deviceId || this.builderForm.device_id || this.devices[0]?.id || null;
                 this.builderForm.plan_id = options.planId || this.builderForm.plan_id || this.plans[0]?.id || null;
@@ -2069,11 +3760,14 @@ const App = {
             } else {
                 this.builderForm.device_id = null;
                 this.builderForm.plan_id = options.planId || this.builderForm.plan_id || this.plans[0]?.id || null;
+                this.syncBuilderSelections();
             }
             this.prefillContact();
+            this.syncBuilderMobileStep();
         },
         setBuilderFlow(flowType) {
             this.builderForm.flow_type = flowType;
+            this.builderMobileStep = 1;
             if (flowType === 'buy_device' && !this.builderForm.device_id) {
                 this.builderForm.device_id = this.devices[0]?.id || null;
                 this.syncBuilderSelections();
@@ -2083,13 +3777,16 @@ const App = {
                 if (!this.builderForm.plan_id) {
                     this.builderForm.plan_id = this.plans[0]?.id || null;
                 }
+                this.syncBuilderSelections();
             }
+            this.syncBuilderMobileStep();
         },
         closeBuilder() {
             this.showBuilder = false;
             this.revokeObjectUrl(this.paymentProofPreview);
             this.paymentProofFile = null;
             this.paymentProofPreview = null;
+            this.builderMobileStep = 1;
         },
         changeQuantity(step) {
             this.builderForm.quantity = Math.max(1, Number(this.builderForm.quantity || 1) + step);
@@ -2128,6 +3825,12 @@ const App = {
                 return this.toastMessage('请选择要配卡的设备');
             if (
                 this.builderForm.flow_type === 'buy_device' &&
+                !this.availablePlansForBuilder.length
+            ) {
+                return this.toastMessage('这台设备当前没有勾选可配套餐，请联系商家处理');
+            }
+            if (
+                this.builderForm.flow_type === 'buy_device' &&
                 this.selectedDevice &&
                 this.availablePlansForBuilder.length &&
                 !this.availablePlansForBuilder.find((plan) => plan.id === this.builderForm.plan_id)
@@ -2159,7 +3862,8 @@ const App = {
                     minSize: 240 * 1024,
                 });
                 fd.append('payment_proof', paymentProof);
-                await api.post('/orders', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                const flowType = this.builderForm.flow_type;
+                const { data } = await api.post('/orders', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
                 this.closeBuilder();
                 this.resetBuilder();
                 await Promise.all([
@@ -2167,8 +3871,14 @@ const App = {
                     this.fetchMyOrders(false),
                     this.isAdmin ? this.refreshAdminData() : Promise.resolve(),
                 ]);
-                this.showOrdersModal = true;
-                this.toastMessage('订单已提交，等待人工审核');
+                if (flowType === 'ship_device') {
+                    this.shipAddressPromptOrderNo = data?.order_no || '';
+                    this.showShipAddressPrompt = true;
+                    this.toastMessage('订单已提交，请按弹窗地址把设备寄给商家');
+                } else {
+                    this.showOrdersModal = true;
+                    this.toastMessage('订单已提交，等待人工审核');
+                }
             } catch (error) {
                 this.toastMessage(this.errorMessage(error));
             } finally {
@@ -2179,7 +3889,14 @@ const App = {
             if (!(await this.ensureLogin('查看订单'))) return;
             const previousOrders = [...this.myOrders];
             const { data } = await api.get('/orders');
-            this.myOrders = data;
+            this.myOrders = (data || []).map((order) => ({
+                ...order,
+                device_submission: {
+                    ...(order.device_submission || {}),
+                    outbound_company: order?.device_submission?.outbound_company || '',
+                    outbound_tracking: order?.device_submission?.outbound_tracking || '',
+                },
+            }));
             if (showModal) this.showOrdersModal = true;
             this.handleMyOrderNoticeUpdates(previousOrders, this.myOrders, {
                 suppressToast: Boolean(options.suppressNoticeToast) || !previousOrders.length,
@@ -2188,6 +3905,29 @@ const App = {
         },
         async openOrders() {
             await this.fetchMyOrders(true);
+        },
+        closeShipAddressPrompt() {
+            this.showShipAddressPrompt = false;
+            this.shipAddressPromptOrderNo = '';
+        },
+        async openShipAddressPromptOrders() {
+            this.closeShipAddressPrompt();
+            await this.openOrders();
+        },
+        async saveMyOrderDeviceShipment(order) {
+            if (!order?.id || !this.allowOrderDeviceShipmentUpdate(order)) {
+                return;
+            }
+            await this.runAdminOrderAction({ id: order.id }, async () => {
+                await api.put('/orders/' + order.id + '/device-shipment', {
+                    outbound_company: order.device_submission?.outbound_company || '',
+                    outbound_tracking: order.device_submission?.outbound_tracking || '',
+                });
+                await this.fetchMyOrders(true, { suppressNoticeToast: true });
+                this.toastMessage('寄出快递信息已保存');
+            }).catch((error) => {
+                this.toastMessage(this.errorMessage(error));
+            });
         },
         async cancelOrder(order) {
             if (!window.confirm('确认取消订单 ' + order.order_no + ' 吗？')) return;
@@ -2253,29 +3993,347 @@ const App = {
             this.isAdminView = true;
             try {
                 await this.refreshAdminData();
+                if (!this.visibleAdminTabs.find((tab) => tab.value === this.adminTab)) {
+                    this.adminTab = this.visibleAdminTabs[0]?.value || 'dashboard';
+                }
+                this.persistAdminUiState();
             } catch (error) {
                 this.toastMessage(this.errorMessage(error));
             }
         },
         goStorefront() {
             if (!this.confirmDiscardChanges()) return;
-            window.location.href = '/';
+            window.location.href = this.tenantStorefrontUrl(this.currentTenant);
         },
         async refreshAdminData() {
-            await Promise.all([
-                this.fetchAdminDashboard(),
-                this.fetchAdminPlans(),
-                this.fetchAdminDevices(),
-                this.fetchAdminOrders(),
-                this.fetchAdminSettings(),
-            ]);
-            if (this.adminTab === 'logistics') {
-                await this.runEmsDiagnostics();
+            if (this.savingStates.adminRefresh) return;
+            this.setSavingState('adminRefresh', true);
+            const tasks = [];
+            try {
+                if (this.adminPermissionEnabled('dashboard.view')) {
+                    tasks.push(this.fetchAdminDashboard());
+                    tasks.push(this.fetchAdminAuditLogs());
+                }
+                if (this.adminPermissionEnabled('catalog.manage')) {
+                    tasks.push(this.fetchAdminPlans(), this.fetchAdminDevices());
+                }
+                if (this.adminPermissionEnabled('orders.manage')) {
+                    tasks.push(this.fetchAdminOrders());
+                }
+                if (this.adminPermissionEnabled('tenant.settings') || this.adminPermissionEnabled('logistics.manage')) {
+                    tasks.push(this.fetchAdminSettings());
+                } else {
+                    this.prepareAdminAccountForm();
+                }
+                if (this.adminPermissionEnabled('team.manage')) {
+                    tasks.push(this.fetchTeamMembers());
+                }
+                if (this.isPlatformAdmin && this.adminPermissionEnabled('platform.manage')) {
+                    tasks.push(this.fetchPlatformTenants());
+                }
+                if (this.isPlatformAdmin && this.adminPermissionEnabled('billing.manage')) {
+                    tasks.push(this.fetchPlatformBillingRecords());
+                }
+                await Promise.all(tasks);
+                if (this.adminTab === 'site' && this.adminPermissionEnabled('dashboard.view')) {
+                    await this.fetchCurrentTenantDomainDiagnostics();
+                }
+                if (this.adminTab === 'logistics' && this.tenantFeatureEnabled('ems') && this.adminPermissionEnabled('logistics.manage')) {
+                    await this.runEmsDiagnostics();
+                }
+                this.adminLastRefreshedAt = new Date().toISOString();
+            } finally {
+                this.setSavingState('adminRefresh', false);
+            }
+        },
+        defaultTenantEditorForm() {
+            return {
+                id: null,
+                code: '',
+                name: '',
+                status: 'active',
+                expires_at: '',
+                subscription_name: '标准版',
+                max_user_count: 0,
+                max_order_count: 0,
+                max_plan_count: 0,
+                max_device_count: 0,
+                subscription_type: 'paid',
+                auto_suspend_on_expiry: true,
+                primary_domain: '',
+                domain_bindings_text: '',
+                primary_admin_domain: '',
+                admin_domain_bindings_text: '',
+                features: this.normalizeTenantFeatureSelection(Object.keys(this.tenantFeatureCatalog())),
+                contact_name: '',
+                contact_phone: '',
+                note: '',
+                admin_username: '',
+                admin_nickname: '',
+                admin_phone: '',
+                admin_password: '',
+                admin_password_confirm: '',
+            };
+        },
+        defaultTeamEditorForm() {
+            return {
+                id: null,
+                username: '',
+                nickname: '',
+                phone: '',
+                role: this.teamRoleOptions[0]?.code || 'staff_service',
+                status: 'active',
+                permissions: this.normalizeTeamPermissionSelection(this.teamRoleOptions[0]?.permissions || []),
+                password: '',
+                password_confirm: '',
+            };
+        },
+        defaultBillingEditorForm() {
+            const defaultTenantId = String(this.platformBillingTenants[0]?.id || this.platformTenants[0]?.id || '');
+            return {
+                tenant_id: defaultTenantId,
+                kind: 'renewal',
+                subscription_name: '',
+                amount: 0,
+                duration_days: 30,
+                max_user_count: '',
+                max_order_count: '',
+                max_plan_count: '',
+                max_device_count: '',
+                features: [],
+                auto_suspend_on_expiry: true,
+                note: '',
+                apply_now: true,
+            };
+        },
+        tenantStorefrontUrl(tenant) {
+            const customUrl = String(tenant?.storefront_url || '').trim();
+            if (customUrl) {
+                return customUrl;
+            }
+            const primaryDomain = String(tenant?.primary_domain || '').trim();
+            if (primaryDomain) {
+                return `https://${primaryDomain}`;
+            }
+            const code = String(tenant?.code || '').trim();
+            if (!code || code === 'default') {
+                return '/';
+            }
+            return `/t/${encodeURIComponent(code)}`;
+        },
+        tenantAbsoluteUrl(path) {
+            try {
+                return new URL(path, window.location.origin).toString();
+            } catch (error) {
+                return path;
+            }
+        },
+        tenantStorefrontLink(tenant) {
+            return this.tenantAbsoluteUrl(this.tenantStorefrontUrl(tenant));
+        },
+        tenantAdminUrl(tenant) {
+            const customUrl = String(tenant?.admin_url || '').trim();
+            if (customUrl) {
+                return customUrl;
+            }
+            const primaryAdminDomain = String(tenant?.primary_admin_domain || '').trim();
+            if (primaryAdminDomain) {
+                return `https://${primaryAdminDomain}`;
+            }
+            const primaryDomain = String(tenant?.primary_domain || '').trim();
+            if (primaryDomain) {
+                return `https://${primaryDomain}/admin`;
+            }
+            const code = String(tenant?.code || '').trim();
+            if (!code || code === 'default') {
+                return '/admin';
+            }
+            return `/admin/t/${encodeURIComponent(code)}`;
+        },
+        tenantAdminLink(tenant) {
+            return this.tenantAbsoluteUrl(this.tenantAdminUrl(tenant));
+        },
+        async fetchPlatformTenants() {
+            if (!this.isPlatformAdmin) return;
+            const { data } = await api.get('/admin/platform/tenants');
+            this.platformTenants = data.tenants || [];
+            this.platformBillingTenants = this.platformTenants.map((tenant) => ({
+                id: tenant.id,
+                code: tenant.code,
+                name: tenant.name,
+                status: tenant.status,
+            }));
+            if (!this.showBillingEditor && !this.platformBillingRecords.length) {
+                this.billingEditorForm = this.defaultBillingEditorForm();
+                this.rememberBillingSnapshot();
+            }
+            this.platformTenantStats = data.stats || {
+                total_count: 0,
+                active_count: 0,
+                healthy_count: 0,
+                config_warning_count: 0,
+                expiring_soon_count: 0,
+                expired_count: 0,
+                suspended_count: 0,
+            };
+        },
+        async fetchAdminAuditLogs(options = {}) {
+            if (!this.adminPermissionEnabled('dashboard.view')) return;
+            const requestedPage = Math.max(1, Number(options.page || this.auditPagination.page || 1));
+            const requestedPageSize = Math.max(1, Number(options.page_size || this.auditPagination.page_size || 20));
+            const { data } = await api.get('/admin/audit-logs', {
+                params: {
+                    ...this.normalizeAuditLogFilters(),
+                    page: requestedPage,
+                    page_size: requestedPageSize,
+                },
+            });
+            this.adminAuditLogs = data.logs || [];
+            this.adminAuditSummary = {
+                total_count: data.summary?.total_count || 0,
+                today_count: data.summary?.today_count || 0,
+                success_count: data.summary?.success_count || 0,
+                error_count: data.summary?.error_count || 0,
+                warning_count: data.summary?.warning_count || 0,
+                info_count: data.summary?.info_count || 0,
+                latest_created_at: data.summary?.latest_created_at || null,
+                category_breakdown: data.summary?.category_breakdown || [],
+            };
+            this.auditPagination = {
+                page: Number(data.pagination?.page || requestedPage),
+                page_size: Number(data.pagination?.page_size || requestedPageSize),
+                total_count: Number(data.pagination?.total_count || data.summary?.total_count || 0),
+                total_pages: Number(data.pagination?.total_pages || 1),
+                has_prev: Boolean(data.pagination?.has_prev),
+                has_next: Boolean(data.pagination?.has_next),
+                from_index: Number(data.pagination?.from_index || 0),
+                to_index: Number(data.pagination?.to_index || 0),
+            };
+            this.auditScopeOptions = data.scope_options || [{ code: 'current', label: '当前租户' }];
+            this.auditCategoryOptions = data.category_options || [];
+            if (!this.auditScopeOptions.some((item) => item.code === this.auditLogFilters.scope)) {
+                this.auditLogFilters.scope = this.auditScopeOptions[0]?.code || 'current';
+            }
+            this.adminAuditLastFetchedAt = new Date().toISOString();
+            this.persistAdminUiState();
+        },
+        async exportAdminAuditLogs() {
+            if (!this.adminPermissionEnabled('dashboard.view') || this.savingStates.auditExport) return;
+            this.setSavingState('auditExport', true);
+            try {
+                const response = await api.get('/admin/audit-logs', {
+                    params: {
+                        ...this.normalizeAuditLogFilters(),
+                        export: 'csv',
+                    },
+                    responseType: 'blob',
+                });
+                const blobUrl = URL.createObjectURL(response.data);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = 'audit-logs-' + new Date().toISOString().slice(0, 10) + '.csv';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(blobUrl);
+                this.toastMessage('操作日志导出已开始');
+            } catch (error) {
+                this.toastMessage(this.errorMessage(error));
+            } finally {
+                this.setSavingState('auditExport', false);
+            }
+        },
+        openTenantEditor(tenant = null) {
+            this.showTenantEditor = true;
+            this.tenantEditorForm = tenant
+                ? {
+                      id: tenant.id,
+                      code: tenant.code || '',
+                      name: tenant.name || '',
+                      status: tenant.status || 'active',
+                      expires_at: tenant.expires_at ? String(tenant.expires_at).slice(0, 10) : '',
+                      subscription_name: tenant.subscription_name || '标准版',
+                      max_user_count: Number(tenant.max_user_count || 0),
+                      max_order_count: Number(tenant.max_order_count || 0),
+                      max_plan_count: Number(tenant.max_plan_count || 0),
+                      max_device_count: Number(tenant.max_device_count || 0),
+                      subscription_type: tenant.subscription_type || 'paid',
+                      auto_suspend_on_expiry: tenant.auto_suspend_on_expiry !== false,
+                      primary_domain: tenant.primary_domain || '',
+                      domain_bindings_text: Array.isArray(tenant.domain_bindings) ? tenant.domain_bindings.join('\n') : '',
+                      primary_admin_domain: tenant.primary_admin_domain || '',
+                      admin_domain_bindings_text: Array.isArray(tenant.admin_domain_bindings) ? tenant.admin_domain_bindings.join('\n') : '',
+                      features: this.normalizeTenantFeatureSelection(
+                          tenant.features,
+                          Object.keys(this.tenantFeatureCatalog()),
+                      ),
+                      contact_name: tenant.contact_name || '',
+                      contact_phone: tenant.contact_phone || '',
+                      note: tenant.note || '',
+                      admin_username: tenant.admin_username || '',
+                      admin_nickname: tenant.admin_nickname || '',
+                      admin_phone: tenant.admin_phone || '',
+                      admin_password: '',
+                      admin_password_confirm: '',
+                  }
+                : this.defaultTenantEditorForm();
+            this.resetSecretFieldVisibility(['tenant_admin_password', 'tenant_admin_password_confirm']);
+            this.rememberTenantSnapshot();
+        },
+        closeTenantEditor(force = false) {
+            if (!force && !this.confirmDiscardSection(this.isTenantEditorDirty, '租户编辑内容还没有保存，确认关闭吗？')) {
+                return;
+            }
+            this.showTenantEditor = false;
+            this.tenantEditorForm = this.defaultTenantEditorForm();
+            this.resetSecretFieldVisibility(['tenant_admin_password', 'tenant_admin_password_confirm']);
+            this.rememberTenantSnapshot();
+        },
+        async saveTenantEditor() {
+            if (!this.isPlatformAdmin) return this.toastMessage('仅平台管理员可操作');
+            if (!this.tenantEditorForm.code) return this.toastMessage('请输入租户编码');
+            if (!this.tenantEditorForm.name) return this.toastMessage('请输入租户名称');
+            if (!this.tenantEditorForm.admin_username) return this.toastMessage('请输入租户管理员账号');
+            if (this.tenantEditorForm.admin_password !== this.tenantEditorForm.admin_password_confirm) {
+                return this.toastMessage('两次输入的租户管理员密码不一致');
+            }
+            if (!this.tenantEditorForm.id && !this.tenantEditorForm.admin_password) {
+                return this.toastMessage('新建租户时请设置管理员密码');
+            }
+            if (this.savingStates.tenants) return;
+            this.setSavingState('tenants', true);
+            try {
+                const payload = {
+                    ...this.tenantEditorForm,
+                    features: this.normalizeTenantFeatureSelection(this.tenantEditorForm.features, Object.keys(this.tenantFeatureCatalog())),
+                };
+                if (payload.id) {
+                    await api.put(`/admin/platform/tenants/${payload.id}`, payload);
+                } else {
+                    await api.post('/admin/platform/tenants', payload);
+                }
+                await Promise.all([
+                    this.fetchPlatformTenants(),
+                    this.fetchStorefront(),
+                    this.adminPermissionEnabled('dashboard.view') ? this.fetchAdminDashboard() : Promise.resolve(),
+                ]);
+                this.closeTenantEditor(true);
+                this.toastMessage('租户信息已保存');
+            } catch (error) {
+                this.toastMessage(this.errorMessage(error));
+            } finally {
+                this.setSavingState('tenants', false);
             }
         },
         async fetchAdminDashboard() {
             const { data } = await api.get('/admin/dashboard');
             this.adminDashboard = data;
+            if (data?.tenant) {
+                this.currentTenant = {
+                    ...(this.currentTenant || {}),
+                    ...(data.tenant || {}),
+                };
+            }
         },
         async fetchAdminPlans() {
             const { data } = await api.get('/admin/plans');
@@ -2294,8 +4352,22 @@ const App = {
                     ...order,
                     internal_tags_text: (order.internal_tags || []).join('，'),
                 }));
+                this.adminOrders = this.adminOrders.map((order) => ({
+                    ...order,
+                    device_submission: {
+                        ...(order.device_submission || {}),
+                        outbound_company: order?.device_submission?.outbound_company || '',
+                        outbound_tracking: order?.device_submission?.outbound_tracking || '',
+                    },
+                    _dropship_target_tenant_id: String(order?.dropship?.target_tenant_id || ''),
+                }));
                 const visibleIds = new Set(this.adminOrders.map((order) => order.id));
                 this.selectedAdminOrderIds = this.selectedAdminOrderIds.filter((id) => visibleIds.has(id));
+                if (this.activeAdminTrackOrderId && !visibleIds.has(this.activeAdminTrackOrderId)) {
+                    this.closeAdminTrackModal();
+                }
+                this.adminOrdersLastFetchedAt = new Date().toISOString();
+                this.persistAdminUiState();
                 this.syncAdminWorkflowPolling();
             } finally {
                 this.setSavingState('adminOrders', false);
@@ -2329,12 +4401,7 @@ const App = {
             this.settings = data;
             this.adminSettingsForm = buildSettingsForm(data);
             this.rememberSettingsSnapshot();
-            this.adminAccountForm = {
-                username: this.currentUser?.username || '',
-                current_password: '',
-                new_password: '',
-                confirm_password: '',
-            };
+            this.prepareAdminAccountForm();
             this.resetSecretFieldVisibility([
                 'admin_account_current_password',
                 'admin_account_new_password',
@@ -2342,7 +4409,207 @@ const App = {
                 'logistics_authorization',
                 'logistics_sign_key',
             ]);
+        },
+        prepareAdminAccountForm() {
+            this.adminAccountForm = {
+                username: this.currentUser?.username || '',
+                current_password: '',
+                new_password: '',
+                confirm_password: '',
+            };
+            this.resetSecretFieldVisibility(['admin_account_current_password', 'admin_account_new_password', 'admin_account_confirm_password']);
             this.rememberAccountSnapshot();
+        },
+        async fetchTeamMembers() {
+            if (!this.adminPermissionEnabled('team.manage')) return;
+            const { data } = await api.get('/admin/team/members');
+            this.adminTeamMembers = data.members || [];
+            this.teamRoleOptions = data.role_options || [];
+            this.teamSummary = {
+                total_count: data.summary?.total_count || 0,
+                active_count: data.summary?.active_count || 0,
+                disabled_count: data.summary?.disabled_count || 0,
+                role_breakdown: data.summary?.role_breakdown || [],
+            };
+            if (!this.showTeamEditor) {
+                this.teamEditorForm = this.defaultTeamEditorForm();
+                this.rememberTeamSnapshot();
+            }
+        },
+        openTeamEditor(member = null) {
+            this.showTeamEditor = true;
+            this.teamEditorForm = member
+                ? {
+                      id: member.id,
+                      username: member.username || '',
+                      nickname: member.nickname || '',
+                      phone: member.phone || '',
+                      role: member.role || 'staff_service',
+                      status: member.status || 'active',
+                      permissions: this.normalizeTeamPermissionSelection(member.permissions || []),
+                      password: '',
+                      password_confirm: '',
+                  }
+                : this.defaultTeamEditorForm();
+            this.resetSecretFieldVisibility(['team_member_password', 'team_member_password_confirm']);
+            this.rememberTeamSnapshot();
+        },
+        closeTeamEditor(force = false) {
+            if (!force && !this.confirmDiscardSection(this.isTeamEditorDirty, '团队成员编辑内容还没有保存，确认关闭吗？')) {
+                return;
+            }
+            this.showTeamEditor = false;
+            this.teamEditorForm = this.defaultTeamEditorForm();
+            this.resetSecretFieldVisibility(['team_member_password', 'team_member_password_confirm']);
+            this.rememberTeamSnapshot();
+        },
+        onTeamRoleChange() {
+            this.resetTeamPermissionsToRole();
+        },
+        async saveTeamMember() {
+            if (!this.teamEditorForm.username) return this.toastMessage('请输入员工账号');
+            if (this.teamEditorForm.password !== this.teamEditorForm.password_confirm) {
+                return this.toastMessage('两次输入的员工密码不一致');
+            }
+            if (!this.teamEditorForm.id && !this.teamEditorForm.password) {
+                return this.toastMessage('新建员工时请填写密码');
+            }
+            if (this.savingStates.team) return;
+            this.setSavingState('team', true);
+            try {
+                const payload = {
+                    ...this.teamEditorForm,
+                    permissions: this.normalizeTeamPermissionSelection(this.teamEditorForm.permissions),
+                };
+                if (payload.id) {
+                    await api.put(`/admin/team/members/${payload.id}`, payload);
+                } else {
+                    await api.post('/admin/team/members', payload);
+                }
+                await this.fetchTeamMembers();
+                this.closeTeamEditor(true);
+                this.toastMessage('团队成员已保存');
+            } catch (error) {
+                this.toastMessage(this.errorMessage(error));
+            } finally {
+                this.setSavingState('team', false);
+            }
+        },
+        async toggleTeamMemberStatus(member) {
+            if (!member?.id) return;
+            if (this.savingStates.team) return;
+            this.setSavingState('team', true);
+            try {
+                await api.put(`/admin/team/members/${member.id}`, {
+                    ...member,
+                    status: member.status === 'active' ? 'disabled' : 'active',
+                    permissions: this.normalizeTeamPermissionSelection(member.permissions || []),
+                });
+                await this.fetchTeamMembers();
+                this.toastMessage(member.status === 'active' ? '员工已停用' : '员工已启用');
+            } catch (error) {
+                this.toastMessage(this.errorMessage(error));
+            } finally {
+                this.setSavingState('team', false);
+            }
+        },
+        async fetchPlatformBillingRecords() {
+            if (!this.isPlatformAdmin || !this.adminPermissionEnabled('billing.manage')) return;
+            const { data } = await api.get('/admin/platform/billing-records');
+            this.platformBillingRecords = data.records || [];
+            this.platformBillingTenants = data.tenants || [];
+            if (!this.showBillingEditor) {
+                this.billingEditorForm = this.defaultBillingEditorForm();
+                this.rememberBillingSnapshot();
+            }
+        },
+        openBillingEditor(seed = null) {
+            this.showBillingEditor = true;
+            this.billingEditorForm = seed
+                ? {
+                      ...this.defaultBillingEditorForm(),
+                      ...seed,
+                  }
+                : this.defaultBillingEditorForm();
+            this.rememberBillingSnapshot();
+        },
+        buildTenantBillingSeed(tenant) {
+            const name = tenant?.name || tenant?.code || '';
+            return {
+                tenant_id: String(tenant?.id || ''),
+                subscription_name: tenant?.subscription_name || '',
+                duration_days: 30,
+                max_user_count: tenant?.max_user_count,
+                max_order_count: tenant?.max_order_count,
+                max_plan_count: tenant?.max_plan_count,
+                max_device_count: tenant?.max_device_count,
+                features: this.normalizeTenantFeatureSelection(tenant?.features || []),
+                auto_suspend_on_expiry: tenant?.auto_suspend_on_expiry !== false,
+                note: name ? `续费 ${name}` : '',
+            };
+        },
+        buildBillingRecordSeed(record) {
+            return {
+                tenant_id: String(record?.tenant_id || ''),
+                kind: record?.kind || 'renewal',
+                subscription_name: record?.subscription_name || '',
+                amount: record?.amount || 0,
+                duration_days: record?.duration_days || 0,
+                max_user_count: record?.payload?.max_user_count ?? '',
+                max_order_count: record?.payload?.max_order_count ?? '',
+                max_plan_count: record?.payload?.max_plan_count ?? '',
+                max_device_count: record?.payload?.max_device_count ?? '',
+                features: this.normalizeTenantFeatureSelection(record?.payload?.features || []),
+                auto_suspend_on_expiry: record?.payload?.auto_suspend_on_expiry !== false,
+                note: record?.note || '',
+                apply_now: true,
+            };
+        },
+        closeBillingEditor(force = false) {
+            if (!force && !this.confirmDiscardSection(this.isBillingEditorDirty, '计费记录表单还没有保存，确认关闭吗？')) {
+                return;
+            }
+            this.showBillingEditor = false;
+            this.billingEditorForm = this.defaultBillingEditorForm();
+            this.rememberBillingSnapshot();
+        },
+        async saveBillingRecord() {
+            if (!this.billingEditorForm.tenant_id) return this.toastMessage('请选择目标租户');
+            if (this.savingStates.billing) return;
+            this.setSavingState('billing', true);
+            try {
+                const payload = {
+                    ...this.billingEditorForm,
+                };
+                const normalizedFeatures = this.normalizeTenantFeatureSelection(this.billingEditorForm.features);
+                if (normalizedFeatures.length) {
+                    payload.features = normalizedFeatures;
+                } else {
+                    delete payload.features;
+                }
+                await api.post('/admin/platform/billing-records', payload);
+                await Promise.all([this.fetchPlatformBillingRecords(), this.fetchPlatformTenants()]);
+                this.closeBillingEditor(true);
+                this.toastMessage('计费记录已创建');
+            } catch (error) {
+                this.toastMessage(this.errorMessage(error));
+            } finally {
+                this.setSavingState('billing', false);
+            }
+        },
+        async applyBillingRecord(record) {
+            if (!record?.id) return;
+            if (this.savingStates.billing) return;
+            this.setSavingState('billing', true);
+            try {
+                await api.post(`/admin/platform/billing-records/${record.id}/apply`);
+                await Promise.all([this.fetchPlatformBillingRecords(), this.fetchPlatformTenants(), this.fetchAdminDashboard(), this.fetchStorefront()]);
+                this.toastMessage('授权已应用到租户');
+            } catch (error) {
+                this.toastMessage(this.errorMessage(error));
+            } finally {
+                this.setSavingState('billing', false);
+            }
         },
         openPlanEditor(plan = null) {
             this.revokeObjectUrl(this.planEditorPreview);
@@ -2536,6 +4803,30 @@ const App = {
                 this.setSavingState('device', false);
             }
         },
+        async copyAdminOrderDispatchInfo(order) {
+            await this.copyText(this.buildAdminOrderDispatchInfo(order), '代发信息已复制');
+        },
+        async dispatchAdminOrder(order) {
+            if (!order?.id) return;
+            if (!order?._dropship_target_tenant_id) {
+                return this.toastMessage('请先选择代发目标后台');
+            }
+            const targetTenant = this.availableDropshipTargets(order).find(
+                (tenant) => String(tenant.id) === String(order._dropship_target_tenant_id),
+            );
+            if (!targetTenant) {
+                return this.toastMessage('代发目标后台不存在或不可用');
+            }
+            await this.runAdminOrderAction(order, async () => {
+                const { data } = await api.post('/admin/orders/' + order.id + '/dropship', {
+                    target_tenant_id: order._dropship_target_tenant_id,
+                });
+                await Promise.all([this.fetchAdminOrders(), this.fetchAdminDashboard()]);
+                this.toastMessage(`已代发到 ${data?.target_tenant?.name || targetTenant.name}，目标订单号 ${data?.target_order?.order_no || ''}`);
+            }).catch((error) => {
+                this.toastMessage(this.errorMessage(error));
+            });
+        },
         async deleteDevice(device) {
             if (!window.confirm('确认删除设备 ' + device.name + ' 吗？')) return;
             try {
@@ -2564,6 +4855,90 @@ const App = {
                 this.toastMessage(this.errorMessage(error));
             } finally {
                 this.setOrderSaving(order.id, false);
+            }
+        },
+        async deleteAdminOrder(order) {
+            if (!order?.id) return;
+            this.openAdminDeleteModal(order);
+        },
+        async confirmDeleteAdminOrders() {
+            const orderIds = Array.from(
+                new Set(this.adminDeleteOrderIds.map((item) => Number(item || 0)).filter((item) => Number.isFinite(item) && item > 0)),
+            );
+            if (!orderIds.length) {
+                this.toastMessage('请先选择要删除的订单');
+                return;
+            }
+            if (this.savingStates.deleteOrders) return;
+
+            this.setSavingState('deleteOrders', true);
+            orderIds.forEach((orderId) => this.setOrderSaving(orderId, true));
+
+            try {
+                let deletedCount = 0;
+                if (orderIds.length === 1) {
+                    await api.delete('/admin/orders/' + orderIds[0]);
+                    deletedCount = 1;
+                } else {
+                    const { data } = await api.post('/admin/orders/batch-delete', {
+                        order_ids: orderIds,
+                    });
+                    deletedCount = Number(data?.deleted_count || orderIds.length);
+                }
+
+                if (orderIds.includes(this.activeAdminTrackOrderId)) {
+                    this.closeAdminTrackModal();
+                }
+                this.selectedAdminOrderIds = this.selectedAdminOrderIds.filter((id) => !orderIds.includes(id));
+                this.closeAdminDeleteModal(true);
+                await Promise.all([this.fetchAdminOrders(), this.fetchAdminDashboard()]);
+                this.toastMessage(deletedCount > 1 ? `已删除 ${deletedCount} 单订单` : '订单已删除');
+            } catch (error) {
+                this.toastMessage(this.errorMessage(error));
+            } finally {
+                orderIds.forEach((orderId) => this.setOrderSaving(orderId, false));
+                this.setSavingState('deleteOrders', false);
+            }
+        },
+        async applyBatchOrderStatus() {
+            const selectedOrders = this.selectedAdminOrders();
+            if (!selectedOrders.length) {
+                this.toastMessage('请先选择要处理的订单');
+                return;
+            }
+            if (!this.adminBatchStatus) {
+                this.toastMessage('请先选择要批量设置的状态');
+                return;
+            }
+            if (this.savingStates.batchOrders) return;
+
+            this.setSavingState('batchOrders', true);
+            let successCount = 0;
+            let failedCount = 0;
+            const failedOrders = [];
+
+            try {
+                for (const order of selectedOrders) {
+                    this.setOrderSaving(order.id, true);
+                    try {
+                        await api.put('/admin/orders/' + order.id, {
+                            status: this.adminBatchStatus,
+                        });
+                        successCount += 1;
+                    } catch (error) {
+                        failedCount += 1;
+                        failedOrders.push(order.order_no);
+                    } finally {
+                        this.setOrderSaving(order.id, false);
+                    }
+                }
+                await Promise.all([this.fetchAdminOrders(), this.fetchAdminDashboard()]);
+                const failedText = failedOrders.length ? `，失败订单：${failedOrders.slice(0, 3).join('、')}` : '';
+                this.toastMessage(`批量状态更新完成：成功 ${successCount}，失败 ${failedCount}${failedText}`);
+            } catch (error) {
+                this.toastMessage(this.errorMessage(error));
+            } finally {
+                this.setSavingState('batchOrders', false);
             }
         },
         setOrderStatus(order, status) {
@@ -2637,6 +5012,23 @@ const App = {
                 this.setSavingState('settings', false);
             }
         },
+        async saveLogisticsSettings() {
+            if (this.savingStates.settings) return;
+            this.setSavingState('settings', true);
+            try {
+                await api.put('/admin/settings', {
+                    logistics: {
+                        ...(this.adminSettingsForm.logistics || {}),
+                    },
+                });
+                await Promise.all([this.fetchAdminSettings(), this.fetchStorefront()]);
+                this.toastMessage('物流设置已保存');
+            } catch (error) {
+                this.toastMessage(this.errorMessage(error));
+            } finally {
+                this.setSavingState('settings', false);
+            }
+        },
         async saveAdminAccount() {
             if (!this.adminAccountForm.username) {
                 return this.toastMessage('请输入管理员账号');
@@ -2678,4 +5070,21 @@ const App = {
     },
 };
 
-Vue.createApp(App).mount('#app');
+const appRoot = document.getElementById('app');
+
+try {
+    Vue.createApp(App).mount('#app');
+    if (appRoot) {
+        appRoot.dataset.appMounted = 'true';
+    }
+} catch (error) {
+    console.error('Failed to mount app:', error);
+    if (typeof window.__renderAppBootMessage === 'function') {
+        window.__renderAppBootMessage({
+            title: '页面加载失败',
+            message: error?.message || '应用初始化失败，请刷新后重试。',
+            error: true,
+        });
+    }
+    throw error;
+}
